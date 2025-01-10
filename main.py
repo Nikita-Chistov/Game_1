@@ -85,7 +85,7 @@ class Bildings(pygame.sprite.Sprite):
         self.y = y
         board.board[self.y][self.x] = self
         self.board = board
-        self.rect = pygame.Rect(0, 0, self.Size[0])
+        self.rect = pygame.Rect(0, 0, self.Size[0], self.Size[1])
         self.resize()
         self.have_figure = False
 
@@ -101,7 +101,9 @@ class Bildings(pygame.sprite.Sprite):
         self.rect.y = self.y * self.board.cell_size + self.board.y
         self.image = self.Sprite_images[self.board.cell_size][self.Patern[self.current_sprite]]
 
-
+    def kill(self):
+        self.__class__.Sprite_group.remove(self)
+        self.board.board[self.y][self.x] = None
 class Conv(Bildings):
     pass
 
@@ -115,6 +117,7 @@ class Board:
         self.cell_size = cell_size
         self.x = 0
         self.y = 0
+        self.currect_bild = Conv
 
     def render(self, screen):
         viev_sprites = pygame.sprite.Group()
@@ -135,22 +138,50 @@ class Board:
         viev_sprites.update()
         viev_sprites.draw(screen)
 
-    def cam_update(self):
-        for event in pygame.event.get():
-            if event.type == pygame.MOUSEBUTTONDOWN and (event.button == 4 or event.button == 5):
-                step_resize = ZOOM_SPEED
-                k = step_resize / self.cell_size
-                if event.button == 4:
-                    if self.cell_size < MAX_CELL_SIZE:
-                        self.x = pygame.mouse.get_pos()[0] - abs(self.x - pygame.mouse.get_pos()[0]) * (1 + k)
-                        self.y = pygame.mouse.get_pos()[1] - abs(self.y - pygame.mouse.get_pos()[1]) * (1 + k)
-                        self.cell_size += step_resize
-                else:
-                    if self.cell_size > MIN_CELL_SIZE:
-                        self.x = pygame.mouse.get_pos()[0] - abs(self.x - pygame.mouse.get_pos()[0]) * (1 - k)
-                        self.y = pygame.mouse.get_pos()[1] - abs(self.y - pygame.mouse.get_pos()[1]) * (1 - k)
-                        self.cell_size -= step_resize
-                all_sprites.update()
+
+    def get_cell(self, mouse_pos):
+        cell_x = (mouse_pos[0] - self.x) // self.cell_size
+        cell_y = (mouse_pos[1] - self.y) // self.cell_size
+        return (cell_x, cell_y)
+
+    def build(self):
+        if self.currect_bild is not None:
+            x, y = self.get_cell(pygame.mouse.get_pos())
+            if self.board[y][x] is None:
+                self.board[y][x] = self.currect_bild(all_sprites, self, *self.get_cell(pygame.mouse.get_pos()))
+    def delete(self):
+        x, y = self.get_cell(pygame.mouse.get_pos())
+        if self.board[y][x] is not None:
+            self.board[y][x].kill()
+            self.board[y][x] = None
+
+    def update(self, *args):
+        if args:
+            event_type = args[0]
+            if event_type == "resize":
+                event = args[1]
+                if event.button == 4 or event.button == 5:
+                    step_resize = ZOOM_SPEED
+                    k = step_resize / self.cell_size
+                    if event.button == 4:
+                        if self.cell_size < MAX_CELL_SIZE:
+                            self.x = pygame.mouse.get_pos()[0] - abs(self.x - pygame.mouse.get_pos()[0]) * (1 + k)
+                            self.y = pygame.mouse.get_pos()[1] - abs(self.y - pygame.mouse.get_pos()[1]) * (1 + k)
+                            self.cell_size += step_resize
+                    else:
+                        if self.cell_size > MIN_CELL_SIZE:
+                            self.x = pygame.mouse.get_pos()[0] - abs(self.x - pygame.mouse.get_pos()[0]) * (1 - k)
+                            self.y = pygame.mouse.get_pos()[1] - abs(self.y - pygame.mouse.get_pos()[1]) * (1 - k)
+                            self.cell_size -= step_resize
+                    all_sprites.update()
+            if event_type == "MouseButton_pressed":
+                buttons = args[1]
+                if buttons[0]:
+                    self.build()
+                if buttons[2]:
+                    self.delete()
+
+
 
         if pygame.key.get_pressed()[pygame.K_w]:
             self.y += MOVE_SPEED
@@ -176,17 +207,22 @@ if __name__ == '__main__':
     fps = TICKS
     all_sprites = pygame.sprite.Group()
 
-    for i in range(100):
-        for j in range(100):
-            Conv(all_sprites, Board, i, j)
+    # for i in range(100):
+    #     for j in range(100):
+    #         Conv(all_sprites, Board, i, j)
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            if event.type == pygame.MOUSEWHEEL:
-                pass
+            if event.type == pygame.MOUSEBUTTONDOWN and (event.button == 4 or event.button == 5):
+                Board.update("resize", event)
+
+                
+        if pygame.mouse.get_pressed():
+            Board.update("MouseButton_pressed", pygame.mouse.get_pressed())
+
         screen.fill((0, 0, 0))
-        Board.cam_update()
+        Board.update()
         Board.render(screen)
         Bildings.Update()
         #all_sprites.update()
