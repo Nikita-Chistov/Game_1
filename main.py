@@ -51,8 +51,8 @@ def load_image(path, colorkey=None):
 class Bildings(pygame.sprite.Sprite):
     Sprite_images = get_resize_images("conv")
     Size = (1, 1)
-    Patern_delays = [60]
-    Patern_images = [0]
+    Patern_delays = []
+    Patern_images = []
     capture = 0
     current_sprite = 0
     Sprite_group = pygame.sprite.Group()
@@ -64,8 +64,7 @@ class Bildings(pygame.sprite.Sprite):
 
     @classmethod
     def Update_animation(cls):
-        print(cls.current_sprite)
-        cls.capture = (cls.capture + 1) % cls.Patern_delays[-1]
+        cls.capture = (cls.capture + 1) % (cls.Patern_delays[-1] + 1)
         if cls.capture in cls.Patern_delays:
             cls.current_sprite = cls.Patern_images[cls.Patern_delays.index(cls.capture)]
         if cls.capture == cls.Patern_delays[-1]:
@@ -73,7 +72,6 @@ class Bildings(pygame.sprite.Sprite):
                 sprite.have_figure = sprite.check_have_figure()
                 if sprite.have_figure:
                     sprite.create_product()
-
     def create_product(self):
         pass
 
@@ -108,10 +106,13 @@ class Bildings(pygame.sprite.Sprite):
 class Conv(Bildings):
     Sprite_images = get_resize_images("Belt")
     Size = (1, 1)
-    Patern_delays = list(range(0, 100, 1))
-    Patern_images = list(range(0, 100, 1))
+    # Patern_delays = list(range(0, 100, 1))
+    # Patern_images = list(range(0, 100, 1))
+    Patern_delays = [0, 10]
+    Patern_images = [0, 50]
     capture = 0
     current_sprite = 0
+
 
 
 class Board:
