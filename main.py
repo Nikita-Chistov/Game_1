@@ -28,10 +28,21 @@ def get_resize_images(name):
                 resized_image = pil_image.resize((size, size), Image.LANCZOS)
                 resized_surface = pygame.image.fromstring(resized_image.tobytes(), resized_image.size, 'RGBA')
                 resized_surface = resized_surface.convert_alpha()
-                size_images.append(resized_surface)
-                print(image_name)
+                orientation_images = []
+                for orientation in range(4):
+                    orientation_images.append(pygame.transform.rotate(resized_surface, orientation * -90))
+                size_images.append(orientation_images)
         images[size] = size_images
     return images
+
+
+def red_filter(image):
+    width, height = image.get_size()
+    for x in range(width):
+        for y in range(height):
+            r, g, b, a = image.get_at((x, y))
+            red = (r + g + b) // 3
+            image.set_at((x, y), (red, 0, 0, a))
 
 
 def load_image(path, colorkey=None):
@@ -72,23 +83,25 @@ class Bildings(pygame.sprite.Sprite):
                 sprite.have_figure = sprite.check_have_figure()
                 if sprite.have_figure:
                     sprite.create_product()
+
     def create_product(self):
         pass
 
-    def __init__(self, group, board, x, y):
-        super().__init__(group)
+    def __init__(self, board, x, y, orientation):
+        super().__init__(all_sprites)
         self.__class__.Sprite_group.add(self)
         self.size = self.Size
         self.x = x
         self.y = y
-        board.board[self.y][self.x] = self
+        self.orientation = orientation
         self.board = board
         self.rect = pygame.Rect(0, 0, self.Size[0] * self.board.cell_size, self.Size[1] * self.board.cell_size)
         self.update_image()
+        board.board[self.y][self.x] = self
         self.have_figure = False
 
     def update_image(self):
-        self.image = self.Sprite_images[self.board.cell_size][self.current_sprite]
+        self.image = self.Sprite_images[self.board.cell_size][self.current_sprite][self.orientation]
 
     def update(self, *args):
         if args:
@@ -98,6 +111,7 @@ class Bildings(pygame.sprite.Sprite):
         self.rect.x = self.x * self.board.cell_size + self.board.x
         self.rect.y = self.y * self.board.cell_size + self.board.y
         self.update_image()
+
     def kill(self):
         self.__class__.Sprite_group.remove(self)
         self.board.board[self.y][self.x] = None
@@ -106,13 +120,20 @@ class Bildings(pygame.sprite.Sprite):
 class Conv(Bildings):
     Sprite_images = get_resize_images("Belt")
     Size = (1, 1)
-    # Patern_delays = list(range(0, 100, 1))
-    # Patern_images = list(range(0, 100, 1))
-    Patern_delays = [0, 10]
-    Patern_images = [0, 50]
+    Patern_delays = list(range(0, 100, 1))
+    Patern_images = list(range(0, 100, 1))
+    # Patern_delays = [0, 10]
+    # Patern_images = [0, 50]
     capture = 0
     current_sprite = 0
 
+class Factory(Bildings):
+    Sprite_images = get_resize_images("Factory")
+    Size = (1, 1)
+    Patern_delays = [0]
+    Patern_images = [0]
+    capture = 0
+    current_sprite = 0
 
 
 class Board:
@@ -124,7 +145,8 @@ class Board:
         self.cell_size = cell_size
         self.x = 0
         self.y = 0
-        self.currect_bild = Conv
+        self.currect_bild = None
+        self.currect_orientation = 0
 
     def render(self, screen):
         viev_sprites = pygame.sprite.Group()
@@ -143,6 +165,15 @@ class Board:
                         viev_sprites.add(self.board[row][col])
         viev_sprites.update()
         viev_sprites.draw(screen)
+        if self.currect_bild is not None:
+            phantom_image = self.currect_bild.Sprite_images[self.cell_size][0][self.currect_orientation].copy()
+            phantom_image.set_alpha(128)
+            if self.board[self.get_cell(pygame.mouse.get_pos())[1]][
+                self.get_cell(pygame.mouse.get_pos())[0]] is not None:
+                red_filter(phantom_image)
+                phantom_image.set_alpha(96)
+            screen.blit(phantom_image, (self.get_cell(pygame.mouse.get_pos())[0] * self.cell_size + self.x,
+                                        self.get_cell(pygame.mouse.get_pos())[1] * self.cell_size + self.y))
 
     def get_cell(self, mouse_pos):
         cell_x = (mouse_pos[0] - self.x) // self.cell_size
@@ -153,13 +184,41 @@ class Board:
         if self.currect_bild is not None:
             x, y = self.get_cell(pygame.mouse.get_pos())
             if self.board[y][x] is None:
-                self.board[y][x] = self.currect_bild(all_sprites, self, *self.get_cell(pygame.mouse.get_pos()))
+                self.currect_bild(self, *self.get_cell(pygame.mouse.get_pos()), self.currect_orientation)
 
     def delete(self):
         x, y = self.get_cell(pygame.mouse.get_pos())
         if self.board[y][x] is not None:
             self.board[y][x].kill()
             self.board[y][x] = None
+
+    def change_current_bild(self, key):
+        bildings_panel = {
+            0: Conv,
+            1: Factory,
+            2: Conv,
+            3: Conv,
+            4: Conv,
+            5: Conv,
+            6: Conv,
+            7: Conv,
+            8: Conv,
+            9: Conv,
+
+        }
+        if self.currect_bild == bildings_panel[key]:
+            self.currect_bild = None
+        else:
+            self.currect_bild = bildings_panel[key]
+
+    def copy_to_current_bild(self):
+        if self.currect_bild is None:
+            x, y = self.get_cell(pygame.mouse.get_pos())
+            if self.board[y][x] is not None:
+                self.currect_bild = self.board[y][x].__class__
+                self.currect_orientation = self.board[y][x].orientation
+        else:
+            self.currect_bild = None
 
     def update(self, *args):
         if args:
@@ -179,12 +238,25 @@ class Board:
                             self.x = pygame.mouse.get_pos()[0] - abs(self.x - pygame.mouse.get_pos()[0]) * (1 - k)
                             self.y = pygame.mouse.get_pos()[1] - abs(self.y - pygame.mouse.get_pos()[1]) * (1 - k)
                             self.cell_size -= step_resize
-            if event_type == "MouseButton_pressed":
+            elif event_type == "MouseButton_pressed":
                 buttons = args[1]
                 if buttons[0]:
                     self.build()
                 if buttons[2]:
                     self.delete()
+            elif event_type == "keydown":
+                key = args[1].key
+                bilds_keys = [pygame.K_0, pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5, pygame.K_6,
+                              pygame.K_7, pygame.K_8, pygame.K_9]
+                if key == pygame.K_r:
+                    self.currect_orientation = (self.currect_orientation + 1) % 4
+
+                elif key == pygame.K_q:
+                    print("q")
+                    self.copy_to_current_bild()
+
+                elif key in bilds_keys:
+                    self.change_current_bild(bilds_keys.index(key))
 
         if pygame.key.get_pressed()[pygame.K_w]:
             self.y += MOVE_SPEED
@@ -209,16 +281,19 @@ if __name__ == '__main__':
     running = True
     fps = TICKS
     all_sprites = pygame.sprite.Group()
+    phantom_bilds = pygame.sprite.Group()
 
-    for i in range(100):
-        for j in range(100):
-            Conv(all_sprites, Board, i, j)
+    for i in range(5, 10):
+        for j in range(5, 10):
+            Conv(Board, i, j, 1)
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             if event.type == pygame.MOUSEBUTTONDOWN and (event.button == 4 or event.button == 5):
                 Board.update("resize", event)
+            if event.type == pygame.KEYDOWN:
+                Board.update("keydown", event)
 
         if pygame.mouse.get_pressed():
             Board.update("MouseButton_pressed", pygame.mouse.get_pressed())
@@ -234,3 +309,5 @@ if __name__ == '__main__':
         fps_text = font.render(f'FPS: {int(cur_fps)}', True, (255, 255, 255))
         screen.blit(fps_text, (10, 10))
         pygame.display.update()
+
+
