@@ -1,7 +1,3 @@
-from pydoc import render_doc
-
-from matplotlib.pyplot import figure
-from pygame.draw import circle
 import math
 from settings import *
 import numpy as np
@@ -322,7 +318,6 @@ class Board:
 
         viev_sprites.update()
         viev_sprites.draw(screen)
-        print(len(viev_figures) + len(viev_sprites))
         for figure in viev_figures:
             figure.update_pos()
             figure.render()
