@@ -64,7 +64,7 @@ class Bildings(pygame.sprite.Sprite):
 
     @classmethod
     def Update_animation(cls):
-        print(cls.current_sprite)
+        print(cls.current_sprite, cls.capture)
         cls.capture = (cls.capture + 1) % cls.Patern_delays[-1]
         if cls.capture in cls.Patern_delays:
             cls.current_sprite = cls.Patern_images[cls.Patern_delays.index(cls.capture)]
@@ -110,6 +110,8 @@ class Conv(Bildings):
     Size = (1, 1)
     Patern_delays = list(range(0, 100, 1))
     Patern_images = list(range(0, 100, 1))
+    #Patern_delays = [30, 40, 50]
+    #Patern_images = [10, 40, 90]
     capture = 0
     current_sprite = 0
 
@@ -228,7 +230,7 @@ if __name__ == '__main__':
         Conv.Update_animation()
         # all_sprites.update()
         # all_sprites.draw(screen)
-        clock.tick(60)
+        clock.tick(10)
         cur_fps = clock.get_fps()
         fps_text = font.render(f'FPS: {int(cur_fps)}', True, (255, 255, 255))
         screen.blit(fps_text, (10, 10))
