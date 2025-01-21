@@ -16,6 +16,8 @@ screen = pygame.display.set_mode(size, pygame.RESIZABLE)
 font = pygame.font.SysFont(None, 30)
 no_effectiveness_update = True
 render_count = 0
+all_sprites = pygame.sprite.Group()
+phantom_bilds = pygame.sprite.Group()
 
 
 def get_resize_images(name):
@@ -121,7 +123,7 @@ class Bildings(pygame.sprite.Sprite):
         self.board.board[self.y][self.x] = None
 
 
-class Conv(Bildings):
+class Belt(Bildings):
     Sprite_images = get_resize_images("Belt")
     Size = (1, 1)
     Patern_delays = list(range(0, 100, 1))
@@ -133,13 +135,39 @@ class Conv(Bildings):
     Speed = BELT_SPEED
 
 
+
+
+
 class Factory(Bildings):
     Sprite_images = get_resize_images("Factory")
     Size = (1, 1)
-    Patern_delays = [0]
-    Patern_images = [0]
+    Patern_delays = [0, 600]
+    Patern_images = [0, 0]
     capture = 0
     current_sprite = 0
+    Speed = 1
+
+    @classmethod
+    def Update_animation(cls):
+        print(cls.capture)
+        cls.capture = (cls.capture + cls.Speed) % (cls.Patern_delays[-1] + 1)
+        if cls.capture in cls.Patern_delays:
+            cls.current_sprite = cls.Patern_images[cls.Patern_delays.index(cls.capture)]
+        if cls.capture == cls.Patern_delays[-1]:
+            for sprite in cls.Sprite_group:
+                sprite.have_figure = sprite.check_have_figure()
+                if sprite.have_figure:
+                    sprite.create_product()
+
+    def check_have_figure(self):
+        return True
+
+    def create_product(self):
+       # print(self.capture)
+        self.board.figures_on_board[self.y][self.x] = Figure(2, self.board, self.x, self.y,np.array([
+            [(1, 0, 100, 200, 200), (2, 1, 100, 200, 200)],
+            [(1, 3, 100, 200, 200), (1, 2, 100, 200, 200)]
+        ]))
 
 
 class Figure():
@@ -194,7 +222,7 @@ class Figure():
             next_x = self.x + self.update_x_y[0]
             next_y = self.y + self.update_x_y[1]
             f = False
-            if self.board.board[next_y][next_x].__class__ is Conv:
+            if self.board.board[next_y][next_x].__class__ is Belt:
                 if self.board.board[next_y][next_x].orientation != (self.orientation + 2) % 4:
                     if self.board.figures_on_board[next_y][next_x] is None:
                         f = True
@@ -300,6 +328,7 @@ class Board:
     def render(self, screen):
         viev_sprites = pygame.sprite.Group()
         viev_figures = []
+        viev_belt = pygame.sprite.Group()
         for row in range(-self.y // self.cell_size - 2,
                          - self.y // self.cell_size + screen.get_height() // self.cell_size + 2):
             for col in range(-self.x // self.cell_size - 2,
@@ -312,15 +341,20 @@ class Board:
                                      (col * int(self.cell_size) + self.x, row * int(self.cell_size) + self.y,
                                       int(self.cell_size), int(self.cell_size)), 1)
                     if self.board[row][col] is not None:
-                        viev_sprites.add(self.board[row][col])
+                        if self.board[row][col].__class__ is Belt:
+                            viev_belt.add(self.board[row][col])
+                        else:
+                            viev_sprites.add(self.board[row][col])
                     if self.figures_on_board[row][col] is not None:
                         viev_figures.append(self.figures_on_board[row][col])
-
-        viev_sprites.update()
-        viev_sprites.draw(screen)
+        print(viev_belt)
+        viev_belt.update()
+        viev_belt.draw(screen)
         for figure in viev_figures:
             figure.update_pos()
             figure.render()
+        viev_sprites.update()
+        viev_sprites.draw(screen)
         if self.currect_bild is not None:
             phantom_image = self.currect_bild.Sprite_images[self.cell_size][0][self.currect_orientation].copy()
             phantom_image.set_alpha(128)
@@ -350,16 +384,16 @@ class Board:
 
     def change_current_bild(self, key):
         bildings_panel = {
-            0: Conv,
-            1: Conv,
+            0: Belt,
+            1: Belt,
             2: Factory,
-            3: Conv,
-            4: Conv,
-            5: Conv,
-            6: Conv,
-            7: Conv,
-            8: Conv,
-            9: Conv,
+            3: Belt,
+            4: Belt,
+            5: Belt,
+            6: Belt,
+            7: Belt,
+            8: Belt,
+            9: Belt,
 
         }
         if self.currect_bild == bildings_panel[key]:
@@ -431,16 +465,17 @@ class Board:
                 -2 * self.cell_size < self.y + y * self.cell_size < screen.get_height() + 2 * self.cell_size)
 
 
-if __name__ == '__main__':
+
+def init_game():
+    global Board
+    global render_count
     Board = Board(500, 500, 40)
     running = True
     fps = TICKS
-    all_sprites = pygame.sprite.Group()
-    phantom_bilds = pygame.sprite.Group()
 
     for i in range(5, 10):
         for j in range(5, 10):
-            Conv(Board, i, j, 1)
+            Belt(Board, i, j, 1)
     for i in range(5, 10):
         m = np.array([
             [(1, 0, 100, 200, 200), (2, 1, 100, 200, 200)],
@@ -472,7 +507,7 @@ if __name__ == '__main__':
         else:
             no_effectiveness_update = True
         Board.update()
-        Conv.Update_animation()
+        Belt.Update_animation()
         # all_sprites.update()
         # all_sprites.draw(screen)
         clock.tick(fps)
@@ -480,8 +515,66 @@ if __name__ == '__main__':
         fps_text = font.render(f'FPS: {int(cur_fps)}', True, (255, 255, 255))
         screen.blit(fps_text, (10, 10))
         Figure.Update()
+        Factory.Update_animation()
         # pygame.draw.rect(screen, (128, 105, 102), (300, 300, 100, 100))
         # pygame.draw.rect(screen, (55, 54, 59), (300, 300, 100, 100), 2)
         # screen.blit(pygame.image.load("Data/Sprites/Factory/Factory_1.png"), (200, 200))
         # pygame.draw.circle(screen, pygame.Color("#bec1c6"), (250, 250), 25)
         pygame.display.update()
+
+if __name__ == '__main__':
+    init_game()
+    # Board = Board(500, 500, 40)
+    # running = True
+    # fps = TICKS
+    # all_sprites = pygame.sprite.Group()
+    # phantom_bilds = pygame.sprite.Group()
+    #
+    # for i in range(5, 10):
+    #     for j in range(5, 10):
+    #         Belt(Board, i, j, 1)
+    # for i in range(5, 10):
+    #     m = np.array([
+    #         [(1, 0, 100, 200, 200), (2, 1, 100, 200, 200)],
+    #         [(1, 3, 100, 200, 200), (1, 2, 100, 200, 200)]
+    #     ])
+    #     m = np.rot90(m, 3)
+    #     for j in range(2):
+    #         for k in range(2):
+    #             m[j, k, 1] = (m[j, k, 1] - 3) % 4
+    #     Figure(2, Board, 5, i, m)
+    #
+    # while running:
+    #     for event in pygame.event.get():
+    #         if event.type == pygame.QUIT:
+    #             running = False
+    #         if event.type == pygame.MOUSEBUTTONDOWN and (event.button == 4 or event.button == 5):
+    #             Board.update("resize", event)
+    #         if event.type == pygame.KEYDOWN:
+    #             Board.update("keydown", event)
+    #
+    #     if pygame.mouse.get_pressed():
+    #         Board.update("MouseButton_pressed", pygame.mouse.get_pressed())
+    #     render_count = (render_count + 1) % 1
+    #     if render_count == 0 or no_effectiveness_update:
+    #         screen.fill((0, 0, 0))
+    #         Board.render(screen)
+    #     if Board.cell_size < 50:
+    #         no_effectiveness_update = False
+    #     else:
+    #         no_effectiveness_update = True
+    #     Board.update()
+    #     Belt.Update_animation()
+    #     # all_sprites.update()
+    #     # all_sprites.draw(screen)
+    #     clock.tick(fps)
+    #     cur_fps = clock.get_fps()
+    #     fps_text = font.render(f'FPS: {int(cur_fps)}', True, (255, 255, 255))
+    #     screen.blit(fps_text, (10, 10))
+    #     Figure.Update()
+    #     Factory.Update_animation()
+    #     # pygame.draw.rect(screen, (128, 105, 102), (300, 300, 100, 100))
+    #     # pygame.draw.rect(screen, (55, 54, 59), (300, 300, 100, 100), 2)
+    #     # screen.blit(pygame.image.load("Data/Sprites/Factory/Factory_1.png"), (200, 200))
+    #     # pygame.draw.circle(screen, pygame.Color("#bec1c6"), (250, 250), 25)
+    #     pygame.display.update()
