@@ -1,3 +1,8 @@
+from pydoc import render_doc
+
+from matplotlib.pyplot import figure
+from pygame.draw import circle
+import math
 from settings import *
 import numpy as np
 import pygame
@@ -10,9 +15,11 @@ pygame.init()
 pygame.font.init()
 clock = pygame.time.Clock()
 pygame.display.set_caption('RTKY')
-size = width, height = 500, 500
+size = width, height = 300, 300
 screen = pygame.display.set_mode(size, pygame.RESIZABLE)
 font = pygame.font.SysFont(None, 30)
+no_effectiveness_update = True
+render_count = 0
 
 
 def get_resize_images(name):
@@ -67,6 +74,7 @@ class Bildings(pygame.sprite.Sprite):
     capture = 0
     current_sprite = 0
     Sprite_group = pygame.sprite.Group()
+    Speed = 1
 
     def check_have_figure(self):
         if self.board.figures_on_board[self.y][self.x] != None:
@@ -75,7 +83,7 @@ class Bildings(pygame.sprite.Sprite):
 
     @classmethod
     def Update_animation(cls):
-        cls.capture = (cls.capture + 1) % (cls.Patern_delays[-1] + 1)
+        cls.capture = (cls.capture + cls.Speed) % (cls.Patern_delays[-1] + 1)
         if cls.capture in cls.Patern_delays:
             cls.current_sprite = cls.Patern_images[cls.Patern_delays.index(cls.capture)]
         if cls.capture == cls.Patern_delays[-1]:
@@ -126,6 +134,8 @@ class Conv(Bildings):
     # Patern_images = [0, 50]
     capture = 0
     current_sprite = 0
+    Speed = BELT_SPEED
+
 
 class Factory(Bildings):
     Sprite_images = get_resize_images("Factory")
@@ -134,6 +144,149 @@ class Factory(Bildings):
     Patern_images = [0]
     capture = 0
     current_sprite = 0
+
+
+class Figure():
+    сurrent_pos = 0
+    all_figures = []
+
+    @classmethod
+    def Update(cls):
+        cls.сurrent_pos = (cls.сurrent_pos + BELT_SPEED) % 100
+        if cls.сurrent_pos == 0:
+            for figure in cls.all_figures:
+                figure.update_pos_on_board()
+        elif cls.сurrent_pos == 50:
+            for figure in cls.all_figures:
+                figure.new_orientation()
+
+    def __init__(self, size, board, x, y, figure: np.array):
+
+        self.size = size
+        self.componets = figure
+        self.board = board
+        self.x = x
+        self.y = y
+        self.board.figures_on_board[self.y][self.x] = self
+        self.x_in_cell = 0
+        self.y_in_cell = 0
+        self.new_orientation()
+        self.all_figures.append(self)
+        self.stop = False
+
+    def kill(self):
+        self.board.figures_on_board[self.y][self.x] = None
+        del self.all_figures[self.all_figures.index(self)]
+
+    def new_orientation(self):
+        if self.board.board[self.y][self.x] is None:
+            self.kill()
+        else:
+            if self.board.board[self.y][self.x].orientation == 0:
+                self.update_x_y = (0, -1, 0, 100, 1, 0)
+            elif self.board.board[self.y][self.x].orientation == 1:
+                self.update_x_y = (1, 0, 0, 0, 0, 1)
+            elif self.board.board[self.y][self.x].orientation == 2:
+                self.update_x_y = (0, 1, 0, 0, 1, 0)
+            elif self.board.board[self.y][self.x].orientation == 3:
+                self.update_x_y = (-1, 0, 100, 0, 0, 1)
+            self.orientation = self.board.board[self.y][self.x].orientation
+
+    def update_pos_on_board(self):
+        if self.__class__.сurrent_pos == 0 or self.__class__.сurrent_pos != 0 and self.stop:
+
+            next_x = self.x + self.update_x_y[0]
+            next_y = self.y + self.update_x_y[1]
+            f = False
+            if self.board.board[next_y][next_x].__class__ is Conv:
+                if self.board.board[next_y][next_x].orientation != (self.orientation + 2) % 4:
+                    if self.board.figures_on_board[next_y][next_x] is None:
+                        f = True
+                    else:
+                        if not self.board.figures_on_board[next_y][next_x].stop:
+                            f = True
+            if f:
+                self.stop = False
+                if self.board.figures_on_board[self.y][self.x] == self:
+                    self.board.figures_on_board[self.y][self.x] = None
+                self.x += self.update_x_y[0]
+                self.y += self.update_x_y[1]
+                self.board.figures_on_board[self.y][self.x] = self
+
+
+            else:
+                self.stop = True
+
+    def render_part_circle(self, x, y, size, orientation, color):
+        radius = size
+        surf = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)
+        surf.fill((0, 0, 0, 0))
+        pygame.draw.circle(surf, (0, 0, 0), (radius, radius), radius)
+        if size < 10:
+            pygame.draw.circle(surf, color, (radius, radius), radius - 1)
+            pygame.draw.line(surf, (0, 0, 0), (radius, 0), (radius, radius * 2), 1)
+            pygame.draw.line(surf, (0, 0, 0), (0, radius), (radius * 2, radius), 1)
+        else:
+            pygame.draw.circle(surf, color, (radius, radius), radius - 2)
+            pygame.draw.line(surf, (0, 0, 0), (radius - 1, 0), (radius - 1, radius * 2), 2)
+            pygame.draw.line(surf, (0, 0, 0), (0, radius - 1), (radius * 2, radius - 1), 2)
+        if orientation == 0:
+            mask_rect = pygame.Rect(0, 0, radius, radius)
+        elif orientation == 1:
+            mask_rect = pygame.Rect(radius, 0, radius, radius)
+        elif orientation == 2:
+            mask_rect = pygame.Rect(radius, radius, radius, radius)
+        elif orientation == 3:
+            mask_rect = pygame.Rect(0, radius, radius, radius)
+        surf = surf.subsurface(mask_rect)
+        screen.blit(surf, (x, y))
+
+    def render_part_square(self, x, y, size, orientation, color):
+        surf = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)
+        surf.fill((0, 0, 0, 0))
+        pygame.draw.rect(surf, (0, 0, 0), (0, 0, size * 2, size * 2))
+        if size < 10:
+            pygame.draw.rect(surf, color, (1, 1, size * 2 - 2, size * 2 - 2))
+            pygame.draw.line(surf, (0, 0, 0), (size, 0), (size, size * 2), 1)
+            pygame.draw.line(surf, (0, 0, 0), (0, size), (size * 2, size), 1)
+        else:
+            pygame.draw.rect(surf, color, (2, 2, size * 2 - 4, size * 2 - 4))
+            pygame.draw.line(surf, (0, 0, 0), (size - 1, 0), (size - 1, size * 2), 2)
+            pygame.draw.line(surf, (0, 0, 0), (0, size - 1), (size * 2, size - 1), 2)
+        if orientation == 0:
+            mask_rect = pygame.Rect(0, 0, size, size)
+        elif orientation == 1:
+            mask_rect = pygame.Rect(size, 0, size, size)
+        elif orientation == 2:
+            mask_rect = pygame.Rect(size, size, size, size)
+        elif orientation == 3:
+            mask_rect = pygame.Rect(0, size, size, size)
+        surf = surf.subsurface(mask_rect)
+        screen.blit(surf, (x, y))
+
+    def render(self):
+        centre = (self.x * self.board.cell_size + self.board.x + (
+                self.x_in_cell + 50 * self.update_x_y[4]) * self.board.cell_size // 100,
+                  self.y * self.board.cell_size + self.board.y + (
+                          self.y_in_cell + 50 * self.update_x_y[5]) * self.board.cell_size // 100)
+        # pygame.draw.rect(screen, (122, 0, 122), (self.x * self.board.cell_size + self.board.x, self.y * self.board.cell_size + self.board.y,self.board.cell_size, self.board.cell_size))
+        part_size = self.board.cell_size // 2 // self.size
+        x_n = part_size * self.size // 2
+        y_n = part_size * self.size // 2
+        for i in range(self.size):
+            for j in range(self.size):
+                if self.componets[j, i] is not None:
+                    if self.componets[j, i][0] == 1:
+                        self.render_part_circle(centre[0] - x_n + part_size * i, centre[1] - y_n + part_size * j,
+                                                part_size, self.componets[j, i][1], self.componets[j, i][2:5])
+                    if self.componets[j, i][0] == 2:
+                        self.render_part_square(centre[0] - x_n + part_size * i, centre[1] - y_n + part_size * j,
+                                                part_size, self.componets[j, i][1], self.componets[j, i][2:5])
+
+    def update_pos(self):
+        if not self.stop:
+            self.x_in_cell = (self.update_x_y[2] + self.update_x_y[0] * self.__class__.сurrent_pos)
+            self.y_in_cell = (self.update_x_y[3] + self.update_x_y[1] * self.__class__.сurrent_pos)
 
 
 class Board:
@@ -150,6 +303,7 @@ class Board:
 
     def render(self, screen):
         viev_sprites = pygame.sprite.Group()
+        viev_figures = []
         for row in range(-self.y // self.cell_size - 2,
                          - self.y // self.cell_size + screen.get_height() // self.cell_size + 2):
             for col in range(-self.x // self.cell_size - 2,
@@ -163,8 +317,15 @@ class Board:
                                       int(self.cell_size), int(self.cell_size)), 1)
                     if self.board[row][col] is not None:
                         viev_sprites.add(self.board[row][col])
+                    if self.figures_on_board[row][col] is not None:
+                        viev_figures.append(self.figures_on_board[row][col])
+
         viev_sprites.update()
         viev_sprites.draw(screen)
+        print(len(viev_figures) + len(viev_sprites))
+        for figure in viev_figures:
+            figure.update_pos()
+            figure.render()
         if self.currect_bild is not None:
             phantom_image = self.currect_bild.Sprite_images[self.cell_size][0][self.currect_orientation].copy()
             phantom_image.set_alpha(128)
@@ -195,8 +356,8 @@ class Board:
     def change_current_bild(self, key):
         bildings_panel = {
             0: Conv,
-            1: Factory,
-            2: Conv,
+            1: Conv,
+            2: Factory,
             3: Conv,
             4: Conv,
             5: Conv,
@@ -252,7 +413,6 @@ class Board:
                     self.currect_orientation = (self.currect_orientation + 1) % 4
 
                 elif key == pygame.K_q:
-                    print("q")
                     self.copy_to_current_bild()
 
                 elif key in bilds_keys:
@@ -286,6 +446,17 @@ if __name__ == '__main__':
     for i in range(5, 10):
         for j in range(5, 10):
             Conv(Board, i, j, 1)
+    for i in range(5, 10):
+        m = np.array([
+            [(1, 0, 100, 200, 200), (2, 1, 100, 200, 200)],
+            [(1, 3, 100, 200, 200), (1, 2, 100, 200, 200)]
+        ])
+        m = np.rot90(m, 3)
+        for j in range(2):
+            for k in range(2):
+                m[j, k, 1] = (m[j, k, 1] - 3) % 4
+        Figure(2, Board, 5, i, m)
+
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -297,17 +468,25 @@ if __name__ == '__main__':
 
         if pygame.mouse.get_pressed():
             Board.update("MouseButton_pressed", pygame.mouse.get_pressed())
-
-        screen.fill((0, 0, 0))
+        render_count = (render_count + 1) % 1
+        if render_count == 0 or no_effectiveness_update:
+            screen.fill((0, 0, 0))
+            Board.render(screen)
+        if Board.cell_size < 50:
+            no_effectiveness_update = False
+        else:
+            no_effectiveness_update = True
         Board.update()
-        Board.render(screen)
         Conv.Update_animation()
         # all_sprites.update()
         # all_sprites.draw(screen)
-        clock.tick(60)
+        clock.tick(fps)
         cur_fps = clock.get_fps()
         fps_text = font.render(f'FPS: {int(cur_fps)}', True, (255, 255, 255))
         screen.blit(fps_text, (10, 10))
+        Figure.Update()
+        # pygame.draw.rect(screen, (128, 105, 102), (300, 300, 100, 100))
+        # pygame.draw.rect(screen, (55, 54, 59), (300, 300, 100, 100), 2)
+        # screen.blit(pygame.image.load("Data/Sprites/Factory/Factory_1.png"), (200, 200))
+        # pygame.draw.circle(screen, pygame.Color("#bec1c6"), (250, 250), 25)
         pygame.display.update()
-
-
