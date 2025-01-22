@@ -9,3 +9,8 @@ BELT_SPEED = 2
 
 MAX_CELL_SIZE = 100
 ZOOM_SPEED = 1
+
+
+# Коды построек
+BELT_CODE = 1
+FACTORY_CODE = 2

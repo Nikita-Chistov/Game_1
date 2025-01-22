@@ -135,38 +135,24 @@ class Belt(Bildings):
     Speed = BELT_SPEED
 
 
-
-
-
 class Factory(Bildings):
     Sprite_images = get_resize_images("Factory")
     Size = (1, 1)
-    Patern_delays = [0, 600]
+    Patern_delays = [0, 250]
     Patern_images = [0, 0]
     capture = 0
     current_sprite = 0
     Speed = 1
 
-    @classmethod
-    def Update_animation(cls):
-        print(cls.capture)
-        cls.capture = (cls.capture + cls.Speed) % (cls.Patern_delays[-1] + 1)
-        if cls.capture in cls.Patern_delays:
-            cls.current_sprite = cls.Patern_images[cls.Patern_delays.index(cls.capture)]
-        if cls.capture == cls.Patern_delays[-1]:
-            for sprite in cls.Sprite_group:
-                sprite.have_figure = sprite.check_have_figure()
-                if sprite.have_figure:
-                    sprite.create_product()
-
     def check_have_figure(self):
-        return True
+        if self.board.figures_on_board[self.y][self.x] == None:
+            return True
+        return False
 
     def create_product(self):
-       # print(self.capture)
-        self.board.figures_on_board[self.y][self.x] = Figure(2, self.board, self.x, self.y,np.array([
-            [(1, 0, 100, 200, 200), (2, 1, 100, 200, 200)],
-            [(1, 3, 100, 200, 200), (1, 2, 100, 200, 200)]
+        self.board.figures_on_board[self.y][self.x] = Figure(2, self.board, self.x, self.y, np.array([
+            [(1, 0, 195, 205, 236), (2, 1, 195, 205, 236)],
+            [(1, 3, 195, 205, 236), (1, 2, 195, 205, 236)]
         ]))
 
 
@@ -313,8 +299,14 @@ class Figure():
             self.y_in_cell = (self.update_x_y[3] + self.update_x_y[1] * self.__class__.сurrent_pos)
 
 
+code_bildings = {
+    Belt: BELT_CODE,
+    Factory: FACTORY_CODE
+}
+
+
 class Board:
-    def __init__(self, width, height, cell_size=20):
+    def __init__(self, width, height, cell_size=40):
         self.width = width
         self.height = height
         self.board = [[None for _ in range(width)] for _ in range(height)]
@@ -340,14 +332,14 @@ class Board:
                     pygame.draw.rect(screen, (141, 148, 165),
                                      (col * int(self.cell_size) + self.x, row * int(self.cell_size) + self.y,
                                       int(self.cell_size), int(self.cell_size)), 1)
-                    if self.board[row][col] is not None:
-                        if self.board[row][col].__class__ is Belt:
-                            viev_belt.add(self.board[row][col])
-                        else:
-                            viev_sprites.add(self.board[row][col])
-                    if self.figures_on_board[row][col] is not None:
-                        viev_figures.append(self.figures_on_board[row][col])
-        print(viev_belt)
+                    if 0 <= row < self.height and 0 <= col < self.width:
+                        if self.board[row][col] is not None:
+                            if self.board[row][col].__class__ is Belt:
+                                viev_belt.add(self.board[row][col])
+                            else:
+                                viev_sprites.add(self.board[row][col])
+                        if self.figures_on_board[row][col] is not None:
+                            viev_figures.append(self.figures_on_board[row][col])
         viev_belt.update()
         viev_belt.draw(screen)
         for figure in viev_figures:
@@ -440,6 +432,10 @@ class Board:
                               pygame.K_7, pygame.K_8, pygame.K_9]
                 if key == pygame.K_r:
                     self.currect_orientation = (self.currect_orientation + 1) % 4
+                if key == pygame.K_s:
+                    self.save()
+                if key == pygame.K_l:
+                    self.load()
 
                 elif key == pygame.K_q:
                     self.copy_to_current_bild()
@@ -464,28 +460,46 @@ class Board:
         return (-2 * self.cell_size < self.x + x * self.cell_size < screen.get_width() + 2 * self.cell_size and
                 -2 * self.cell_size < self.y + y * self.cell_size < screen.get_height() + 2 * self.cell_size)
 
+    def save(self):
+        with open("save.txt", "w") as f:
+            code_board = [([None] * self.width) for _ in range(self.height)]
+            for i in range(self.height):
+                for j in range(self.width):
+                    if self.board[i][j] is not None and self.board[i][j].__class__ in code_bildings:
+                        code_board[i][j] = (code_bildings[self.board[i][j].__class__], self.board[i][j].orientation)
+            f.write(str(code_board))
+
+    def load(self):
+        reverse_code_bildings = {v: k for k, v in code_bildings.items()}
+        with open("save.txt", "r") as f:
+            code_board = eval(f.read())
+            for i in range(self.height):
+                for j in range(self.width):
+                    if code_board[i][j] is not None:
+                        reverse_code_bildings[code_board[i][j][0]](self, j, i, code_board[i][j][1])
 
 
-def init_game():
+def init_game(new_game=False):
     global Board
     global render_count
-    Board = Board(500, 500, 40)
+    Board = Board(100, 100, 40)
     running = True
     fps = TICKS
-
-    for i in range(5, 10):
-        for j in range(5, 10):
-            Belt(Board, i, j, 1)
-    for i in range(5, 10):
-        m = np.array([
-            [(1, 0, 100, 200, 200), (2, 1, 100, 200, 200)],
-            [(1, 3, 100, 200, 200), (1, 2, 100, 200, 200)]
-        ])
-        m = np.rot90(m, 3)
-        for j in range(2):
-            for k in range(2):
-                m[j, k, 1] = (m[j, k, 1] - 3) % 4
-        Figure(2, Board, 5, i, m)
+    if not new_game:
+        Board.load()
+    # for i in range(5, 10):
+    #     for j in range(5, 10):
+    #         Belt(Board, i, j, 1)
+    # for i in range(5, 10):
+    #     m = np.array([
+    #         [(1, 0, 100, 200, 200), (1, 1, 100, 200, 200)],
+    #         [(1, 3, 100, 200, 200), (1, 2, 100, 200, 200)]
+    #     ])
+    #     m = np.rot90(m, 3)
+    #     for j in range(2):
+    #         for k in range(2):
+    #             m[j, k, 1] = (m[j, k, 1] - 3) % 4
+    #     Figure(2, Board, 5, i, m)
 
     while running:
         for event in pygame.event.get():
@@ -521,6 +535,7 @@ def init_game():
         # screen.blit(pygame.image.load("Data/Sprites/Factory/Factory_1.png"), (200, 200))
         # pygame.draw.circle(screen, pygame.Color("#bec1c6"), (250, 250), 25)
         pygame.display.update()
+
 
 if __name__ == '__main__':
     init_game()
