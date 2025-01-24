@@ -6,6 +6,7 @@ import os
 import sys
 import random
 from PIL import Image
+import pygame_gui
 
 pygame.init()
 pygame.font.init()
@@ -29,9 +30,9 @@ def get_resize_images(name, standart_size=(1, 1)):
             for image_name in sort_files:
                 image_path = os.path.join(root, image_name)
                 image = load_image(image_path)
-                pil_image = Image.frombytes('RGBA', image.get_size(), pygame.image.tostring(image, 'RGBA'))
+                pil_image = Image.frombytes('RGBA', image.get_size(), pygame.image.tobytes(image, 'RGBA'))
                 resized_image = pil_image.resize((size * standart_size[0], size * standart_size[1]), Image.LANCZOS)
-                resized_surface = pygame.image.fromstring(resized_image.tobytes(), resized_image.size, 'RGBA')
+                resized_surface = pygame.image.frombuffer(resized_image.tobytes(), resized_image.size, 'RGBA')
                 resized_surface = resized_surface.convert_alpha()
                 orientation_images = []
                 for orientation in range(4):
@@ -568,11 +569,45 @@ class Board:
                             reverse_code_bildings[code_board[i][j][0]](self, j, i, code_board[i][j][1])
 
 
+class Interface:
+    def __init__(self, width, height, cell_size=40):
+        self.width = width
+        self.height = height
+        self.board = [[None for _ in range(width)] for _ in range(height)]
+        self.figures_on_board = [[None for _ in range(width)] for _ in range(height)]
+        self.cell_size = cell_size
+        self.x = 0
+        self.y = 0
+        self.currect_bild = None
+        self.currect_orientation = 0
+        self.ui_manager = pygame_gui.UIManager((width, height))
+        self.menu_button = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((450, 450), (50, 50)),
+            text="",
+            manager=self.ui_manager
+        )
+        self.clock = pygame.time.Clock()
+        self.running = True
+
+    def run(self):
+        time_delta = self.clock.tick(60) / 1000.0
+        for event in pygame.event.get():
+            self.ui_manager.process_events(event)
+        self.ui_manager.update(time_delta)
+        self.ui_manager.draw_ui(screen)
+
+        pygame.display.flip()
+
+    def __call__(self):
+        self.run()
+
+
 def init_game(new_game=False):
     global Board
     global render_count
-    Board = Board(100, 100, 40)
+    interface = Interface(width, height)
     running = True
+    Board = Board(100, 100, 40)
     fps = TICKS
     if not new_game:
         Board.load()
@@ -620,6 +655,7 @@ def init_game(new_game=False):
         screen.blit(fps_text, (10, 10))
         Factory.Update_animation()
         Figure.Update()
+        interface.run()
         # pygame.draw.rect(screen, (128, 105, 102), (300, 300, 100, 100))
         # pygame.draw.rect(screen, (55, 54, 59), (300, 300, 100, 100), 2)
         # screen.blit(pygame.image.load("Data/Sprites/Factory/Factory_1.png"), (200, 200))
@@ -628,7 +664,7 @@ def init_game(new_game=False):
 
 
 if __name__ == '__main__':
-    init_game()
+    init_game(True)
     # Board = Board(500, 500, 40)
     # running = True
     # fps = TICKS
