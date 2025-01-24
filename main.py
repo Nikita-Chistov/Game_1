@@ -11,7 +11,7 @@ pygame.init()
 pygame.font.init()
 clock = pygame.time.Clock()
 pygame.display.set_caption('RTKY')
-size = width, height = 300, 300
+size = width, height = 500, 500
 screen = pygame.display.set_mode(size, pygame.RESIZABLE)
 font = pygame.font.SysFont(None, 30)
 no_effectiveness_update = True
@@ -20,7 +20,7 @@ all_sprites = pygame.sprite.Group()
 phantom_bilds = pygame.sprite.Group()
 
 
-def get_resize_images(name):
+def get_resize_images(name, standart_size=(1, 1)):
     images = {}
     for size in range(MIN_CELL_SIZE - ZOOM_SPEED, MAX_CELL_SIZE + ZOOM_SPEED, ZOOM_SPEED):
         size_images = []
@@ -30,7 +30,7 @@ def get_resize_images(name):
                 image_path = os.path.join(root, image_name)
                 image = load_image(image_path)
                 pil_image = Image.frombytes('RGBA', image.get_size(), pygame.image.tostring(image, 'RGBA'))
-                resized_image = pil_image.resize((size, size), Image.LANCZOS)
+                resized_image = pil_image.resize((size * standart_size[0], size * standart_size[1]), Image.LANCZOS)
                 resized_surface = pygame.image.fromstring(resized_image.tobytes(), resized_image.size, 'RGBA')
                 resized_surface = resized_surface.convert_alpha()
                 orientation_images = []
@@ -73,11 +73,11 @@ class Bildings(pygame.sprite.Sprite):
     current_sprite = 0
     Sprite_group = pygame.sprite.Group()
     Speed = 1
-
-    def check_have_figure(self):
-        if self.board.figures_on_board[self.y][self.x] != None:
-            return True
-        return False
+    Inputs = np.array([[0]])
+    Numbes_cells = np.array([[1]])
+    Input_Figures = np.array([["11 11"]])
+    Outputs = np.array([[1]])
+    Size_input_Figures = [2]
 
     @classmethod
     def Update_animation(cls):
@@ -96,7 +96,6 @@ class Bildings(pygame.sprite.Sprite):
     def __init__(self, board, x, y, orientation):
         super().__init__(all_sprites)
         self.__class__.Sprite_group.add(self)
-        self.size = self.Size
         self.x = x
         self.y = y
         self.orientation = orientation
@@ -104,7 +103,27 @@ class Bildings(pygame.sprite.Sprite):
         self.rect = pygame.Rect(0, 0, self.Size[0] * self.board.cell_size, self.Size[1] * self.board.cell_size)
         self.update_image()
         board.board[self.y][self.x] = self
-        self.have_figure = False
+        self.inputs = {}
+        self.outputs = {}
+        if orientation % 2 == 0:
+            size = self.Size
+        else:
+            size = (self.Size[1], self.Size[0])
+        inputs = np.rot90(self.Inputs, 4 - orientation)
+        outputs = np.rot90(self.Outputs, 4 - orientation)
+        inputs_figures = np.rot90(self.Input_Figures, 4 - orientation)
+        numbers_cell = np.rot90(self.Numbes_cells, 4 - orientation)
+        print(inputs, outputs, inputs_figures, numbers_cell)
+        for i in range(size[0]):
+            for j in range(size[1]):
+                self.board.board[self.y + j][self.x + i] = self
+                if inputs[i][j] == 1:
+                    self.inputs[(self.x + i, self.y + j)] = (numbers_cell[i][j], inputs_figures[i][j])
+                if outputs[i][j] == 1:
+                    self.outputs[(self.x + i, self.y + j)] = numbers_cell[i][j]
+
+    def check_have_figure(self):
+        return all([self.board.figures_on_board[y][x] is not None for x, y in self.inputs.keys()])
 
     def update_image(self):
         self.image = self.Sprite_images[self.board.cell_size][self.current_sprite][self.orientation]
@@ -121,6 +140,13 @@ class Bildings(pygame.sprite.Sprite):
     def kill(self):
         self.__class__.Sprite_group.remove(self)
         self.board.board[self.y][self.x] = None
+        if self.orientation % 2 == 0:
+            size = self.Size
+        else:
+            size = (self.Size[1], self.Size[0])
+        for i in range(size[0]):
+            for j in range(size[1]):
+                self.board.board[self.y + j][self.x + i] = None
 
 
 class Belt(Bildings):
@@ -134,40 +160,67 @@ class Belt(Bildings):
     current_sprite = 0
     Speed = BELT_SPEED
 
-
-
+    def check_have_figure(self):
+        return True
 
 
 class Factory(Bildings):
     Sprite_images = get_resize_images("Factory")
     Size = (1, 1)
-    Patern_delays = [0, 600]
+    Patern_delays = [0, 300]
     Patern_images = [0, 0]
     capture = 0
     current_sprite = 0
     Speed = 1
-
-    @classmethod
-    def Update_animation(cls):
-        print(cls.capture)
-        cls.capture = (cls.capture + cls.Speed) % (cls.Patern_delays[-1] + 1)
-        if cls.capture in cls.Patern_delays:
-            cls.current_sprite = cls.Patern_images[cls.Patern_delays.index(cls.capture)]
-        if cls.capture == cls.Patern_delays[-1]:
-            for sprite in cls.Sprite_group:
-                sprite.have_figure = sprite.check_have_figure()
-                if sprite.have_figure:
-                    sprite.create_product()
+    Inputs = np.array([[0]])
+    Numbes_cells = np.array([[1]])
+    Input_Figures = np.array([["11 11"]])
+    Outputs = np.array([[1]])
+    Size_input_Figures = [2]
 
     def check_have_figure(self):
         return True
 
     def create_product(self):
-       # print(self.capture)
-        self.board.figures_on_board[self.y][self.x] = Figure(2, self.board, self.x, self.y,np.array([
-            [(1, 0, 100, 200, 200), (2, 1, 100, 200, 200)],
-            [(1, 3, 100, 200, 200), (1, 2, 100, 200, 200)]
+        self.board.figures_on_board[self.y][self.x] = Figure(2, self.board, self.x, self.y, np.array([
+            [(1, 0, 195, 205, 236), (1, 1, 195, 205, 236)],
+            [(1, 3, 195, 205, 236), (1, 2, 195, 205, 236)]
         ]))
+
+
+class Hub(Bildings):
+    Size = (3, 3)
+    Sprite_images = get_resize_images("Hub", Size)
+    Patern_delays = [0, 250]
+    Patern_images = [0, 0]
+    capture = 0
+    current_sprite = 0
+    Speed = 1
+    Numbes_cells = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+    Inputs = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]])
+    Input_Figures = np.array([["", "11 11", ""], ["11 11", "", "11 11"], ["", "11 11", ""]])
+    Outputs = np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0]])
+    Size_input_Figures = [2]
+
+
+class spliter(Bildings):
+    Size = (2, 1)
+    Sprite_images = get_resize_images("conv", Size)
+    Patern_delays = [0, 250]
+    Patern_images = [0, 0]
+    capture = 0
+    current_sprite = 0
+    Speed = 1
+    Numbes_cells = np.array([[1, 2]])
+    Inputs = np.array([[1, 0]])
+    Input_Figures = np.array([["11 11", ""]])
+    Outputs = np.array([[1, 1]])
+    Size_input_Figures = [2]
+
+    def create_product(self):
+        figure = self.board.figures_on_board[self.y][self.x].componets
+        figure_left, figure_right = np.hsplit(figure, 2)
+        print(figure_left, figure_right)
 
 
 class Figure():
@@ -197,6 +250,15 @@ class Figure():
         self.new_orientation()
         self.all_figures.append(self)
         self.stop = False
+        patern = []
+        for i in range(self.size):
+            for j in range(self.size):
+                if self.componets[i][j][0] != 0:
+                    patern.append("1")
+                else:
+                    patern.append("0")
+            patern.append(" ")
+        self.patern = "".join(patern[:-1])
 
     def kill(self):
         self.board.figures_on_board[self.y][self.x] = None
@@ -218,7 +280,6 @@ class Figure():
 
     def update_pos_on_board(self):
         if self.__class__.сurrent_pos == 0 or self.__class__.сurrent_pos != 0 and self.stop:
-
             next_x = self.x + self.update_x_y[0]
             next_y = self.y + self.update_x_y[1]
             f = False
@@ -229,6 +290,12 @@ class Figure():
                     else:
                         if not self.board.figures_on_board[next_y][next_x].stop:
                             f = True
+            elif self.board.board[next_y][next_x].__class__.__bases__[0] is Bildings:
+                if self.board.figures_on_board[next_y][next_x] is None:
+                    if (next_x, next_y) in self.board.board[next_y][next_x].inputs.keys():
+                        if self.board.board[next_y][next_x].inputs[(next_x, next_y)][1] == self.patern and self.size in \
+                                self.board.board[next_y][next_x].__class__.Size_input_Figures:
+                            f = True
             if f:
                 self.stop = False
                 if self.board.figures_on_board[self.y][self.x] == self:
@@ -236,8 +303,6 @@ class Figure():
                 self.x += self.update_x_y[0]
                 self.y += self.update_x_y[1]
                 self.board.figures_on_board[self.y][self.x] = self
-
-
             else:
                 self.stop = True
 
@@ -313,8 +378,16 @@ class Figure():
             self.y_in_cell = (self.update_x_y[3] + self.update_x_y[1] * self.__class__.сurrent_pos)
 
 
+code_bildings = {
+    Belt: BELT_CODE,
+    Factory: FACTORY_CODE,
+    Hub: HUB_CODE,
+    spliter: SPLITTER_CODE
+}
+
+
 class Board:
-    def __init__(self, width, height, cell_size=20):
+    def __init__(self, width, height, cell_size=40):
         self.width = width
         self.height = height
         self.board = [[None for _ in range(width)] for _ in range(height)]
@@ -340,14 +413,14 @@ class Board:
                     pygame.draw.rect(screen, (141, 148, 165),
                                      (col * int(self.cell_size) + self.x, row * int(self.cell_size) + self.y,
                                       int(self.cell_size), int(self.cell_size)), 1)
-                    if self.board[row][col] is not None:
-                        if self.board[row][col].__class__ is Belt:
-                            viev_belt.add(self.board[row][col])
-                        else:
-                            viev_sprites.add(self.board[row][col])
-                    if self.figures_on_board[row][col] is not None:
-                        viev_figures.append(self.figures_on_board[row][col])
-        print(viev_belt)
+                    if 0 <= row < self.height and 0 <= col < self.width:
+                        if self.board[row][col] is not None:
+                            if self.board[row][col].__class__ is Belt:
+                                viev_belt.add(self.board[row][col])
+                            else:
+                                viev_sprites.add(self.board[row][col])
+                        if self.figures_on_board[row][col] is not None:
+                            viev_figures.append(self.figures_on_board[row][col])
         viev_belt.update()
         viev_belt.draw(screen)
         for figure in viev_figures:
@@ -358,8 +431,12 @@ class Board:
         if self.currect_bild is not None:
             phantom_image = self.currect_bild.Sprite_images[self.cell_size][0][self.currect_orientation].copy()
             phantom_image.set_alpha(128)
-            if self.board[self.get_cell(pygame.mouse.get_pos())[1]][
-                self.get_cell(pygame.mouse.get_pos())[0]] is not None:
+            x, y = self.get_cell(pygame.mouse.get_pos())
+            if self.currect_orientation % 2 == 0:
+                size = self.currect_bild.Size
+            else:
+                size = (self.currect_bild.Size[1], self.currect_bild.Size[0])
+            if any([self.board[y + j][x + i] is not None for i in range(size[0]) for j in range(size[1])]):
                 red_filter(phantom_image)
                 phantom_image.set_alpha(96)
             screen.blit(phantom_image, (self.get_cell(pygame.mouse.get_pos())[0] * self.cell_size + self.x,
@@ -373,7 +450,11 @@ class Board:
     def build(self):
         if self.currect_bild is not None:
             x, y = self.get_cell(pygame.mouse.get_pos())
-            if self.board[y][x] is None:
+            if self.currect_orientation % 2 == 0:
+                size = self.currect_bild.Size
+            else:
+                size = (self.currect_bild.Size[1], self.currect_bild.Size[0])
+            if all([self.board[y + j][x + i] is None for i in range(size[0]) for j in range(size[1])]):
                 self.currect_bild(self, *self.get_cell(pygame.mouse.get_pos()), self.currect_orientation)
 
     def delete(self):
@@ -387,14 +468,13 @@ class Board:
             0: Belt,
             1: Belt,
             2: Factory,
-            3: Belt,
-            4: Belt,
+            3: Hub,
+            4: spliter,
             5: Belt,
             6: Belt,
             7: Belt,
             8: Belt,
             9: Belt,
-
         }
         if self.currect_bild == bildings_panel[key]:
             self.currect_bild = None
@@ -440,6 +520,10 @@ class Board:
                               pygame.K_7, pygame.K_8, pygame.K_9]
                 if key == pygame.K_r:
                     self.currect_orientation = (self.currect_orientation + 1) % 4
+                if key == pygame.K_s:
+                    self.save()
+                if key == pygame.K_l:
+                    self.load()
 
                 elif key == pygame.K_q:
                     self.copy_to_current_bild()
@@ -464,32 +548,52 @@ class Board:
         return (-2 * self.cell_size < self.x + x * self.cell_size < screen.get_width() + 2 * self.cell_size and
                 -2 * self.cell_size < self.y + y * self.cell_size < screen.get_height() + 2 * self.cell_size)
 
+    def save(self):
+        with open("save_board.txt", "w") as f:
+            code_board = [([None] * self.width) for _ in range(self.height)]
+            for i in range(self.height):
+                for j in range(self.width):
+                    if self.board[i][j] is not None and self.board[i][j].__class__ in code_bildings:
+                        code_board[i][j] = (code_bildings[self.board[i][j].__class__], self.board[i][j].orientation)
+            f.write(str(code_board))
+
+    def load(self):
+        reverse_code_bildings = {v: k for k, v in code_bildings.items()}
+        with open("save_board.txt", "r") as f:
+            code_board = eval(f.read())
+            for i in range(self.height):
+                for j in range(self.width):
+                    if code_board[i][j] is not None:
+                        if self.board[i][j] is None:
+                            reverse_code_bildings[code_board[i][j][0]](self, j, i, code_board[i][j][1])
 
 
-def init_game():
+def init_game(new_game=False):
     global Board
     global render_count
-    Board = Board(500, 500, 40)
+    Board = Board(100, 100, 40)
     running = True
     fps = TICKS
-
-    for i in range(5, 10):
-        for j in range(5, 10):
-            Belt(Board, i, j, 1)
-    for i in range(5, 10):
-        m = np.array([
-            [(1, 0, 100, 200, 200), (2, 1, 100, 200, 200)],
-            [(1, 3, 100, 200, 200), (1, 2, 100, 200, 200)]
-        ])
-        m = np.rot90(m, 3)
-        for j in range(2):
-            for k in range(2):
-                m[j, k, 1] = (m[j, k, 1] - 3) % 4
-        Figure(2, Board, 5, i, m)
+    if not new_game:
+        Board.load()
+    # for i in range(5, 10):
+    #     for j in range(5, 10):
+    #         Belt(Board, i, j, 1)
+    # for i in range(5, 10):
+    #     m = np.array([
+    #         [(1, 0, 100, 200, 200), (1, 1, 100, 200, 200)],
+    #         [(1, 3, 100, 200, 200), (1, 2, 100, 200, 200)]
+    #     ])
+    #     m = np.rot90(m, 3)
+    #     for j in range(2):
+    #         for k in range(2):
+    #             m[j, k, 1] = (m[j, k, 1] - 3) % 4
+    #     Figure(2, Board, 5, i, m)
 
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                Board.save()
                 running = False
             if event.type == pygame.MOUSEBUTTONDOWN and (event.button == 4 or event.button == 5):
                 Board.update("resize", event)
@@ -514,13 +618,14 @@ def init_game():
         cur_fps = clock.get_fps()
         fps_text = font.render(f'FPS: {int(cur_fps)}', True, (255, 255, 255))
         screen.blit(fps_text, (10, 10))
-        Figure.Update()
         Factory.Update_animation()
+        Figure.Update()
         # pygame.draw.rect(screen, (128, 105, 102), (300, 300, 100, 100))
         # pygame.draw.rect(screen, (55, 54, 59), (300, 300, 100, 100), 2)
         # screen.blit(pygame.image.load("Data/Sprites/Factory/Factory_1.png"), (200, 200))
         # pygame.draw.circle(screen, pygame.Color("#bec1c6"), (250, 250), 25)
         pygame.display.update()
+
 
 if __name__ == '__main__':
     init_game()
