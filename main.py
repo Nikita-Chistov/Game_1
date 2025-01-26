@@ -12,8 +12,10 @@ pygame.init()
 pygame.font.init()
 clock = pygame.time.Clock()
 pygame.display.set_caption('RTKY')
-size = width, height = 500, 500
-screen = pygame.display.set_mode(size, pygame.RESIZABLE)
+
+display_info = pygame.display.Info()
+size = width, height = (display_info.current_w, display_info.current_h)
+screen = pygame.display.set_mode(size, pygame.FULLSCREEN)
 font = pygame.font.SysFont(None, 30)
 no_effectiveness_update = True
 render_count = 0
@@ -573,34 +575,33 @@ class Interface:
     def __init__(self, width, height, cell_size=40):
         self.width = width
         self.height = height
-        self.board = [[None for _ in range(width)] for _ in range(height)]
-        self.figures_on_board = [[None for _ in range(width)] for _ in range(height)]
+        btn_width = int(width * 0.25)
+        btn_height = int(height * 0.115)
         self.cell_size = cell_size
-        self.x = 0
-        self.y = 0
-        self.currect_bild = None
-        self.currect_orientation = 0
         self.ui_manager = pygame_gui.UIManager((width, height))
         self.menu_button = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((450, 450), (50, 50)),
+            relative_rect=pygame.Rect((width - btn_width//2, height - btn_height),
+                                      (btn_width//2, btn_height)),
             text="",
             manager=self.ui_manager
         )
         self.clock = pygame.time.Clock()
-        self.running = True
 
-    def run(self):
-        time_delta = self.clock.tick(60) / 1000.0
-        for event in pygame.event.get():
+    def run(self, events):
+        for event in events:
             self.ui_manager.process_events(event)
-        self.ui_manager.update(time_delta)
-        self.ui_manager.draw_ui(screen)
-
+            if event.type == pygame_gui.UI_BUTTON_PRESSED and event.ui_element == self.menu_button:
+                print("Menu button pressed")
+                pygame.display.flip()
+                return False
         pygame.display.flip()
+        return True
 
-    def __call__(self):
-        self.run()
+    def update(self, time_delta):
+        self.ui_manager.update(time_delta)
 
+    def draw(self):
+        self.ui_manager.draw_ui(screen)
 
 def init_game(new_game=False):
     global Board
@@ -626,7 +627,9 @@ def init_game(new_game=False):
     #     Figure(2, Board, 5, i, m)
 
     while running:
-        for event in pygame.event.get():
+        events =pygame.event.get()
+        time_delta = clock.tick(fps) / 1000.0
+        for event in events:
             if event.type == pygame.QUIT:
                 Board.save()
                 running = False
@@ -634,7 +637,7 @@ def init_game(new_game=False):
                 Board.update("resize", event)
             if event.type == pygame.KEYDOWN:
                 Board.update("keydown", event)
-
+        running = interface.run(events)
         if pygame.mouse.get_pressed():
             Board.update("MouseButton_pressed", pygame.mouse.get_pressed())
         render_count = (render_count + 1) % 1
@@ -647,6 +650,8 @@ def init_game(new_game=False):
             no_effectiveness_update = True
         Board.update()
         Belt.Update_animation()
+        interface.update(time_delta)
+        interface.draw()
         # all_sprites.update()
         # all_sprites.draw(screen)
         clock.tick(fps)
@@ -655,7 +660,6 @@ def init_game(new_game=False):
         screen.blit(fps_text, (10, 10))
         Factory.Update_animation()
         Figure.Update()
-        interface.run()
         # pygame.draw.rect(screen, (128, 105, 102), (300, 300, 100, 100))
         # pygame.draw.rect(screen, (55, 54, 59), (300, 300, 100, 100), 2)
         # screen.blit(pygame.image.load("Data/Sprites/Factory/Factory_1.png"), (200, 200))
