@@ -575,22 +575,28 @@ class Interface:
     def __init__(self, width, height, cell_size=40):
         self.width = width
         self.height = height
-        btn_width = int(width * 0.25)
+        self.btn_width = int(width * 0.25)
         btn_height = int(height * 0.115)
         self.cell_size = cell_size
         self.ui_manager = pygame_gui.UIManager((width, height))
+
+        button_image = pygame.image.load("Data/Sprites/Button/menu_objects.png").convert_alpha()
+        self.button_image = pygame.transform.scale(button_image, (self.btn_width//8, btn_height//2))  # Подгоните размер изображения под кнопку
+
         self.menu_actions_button = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((width - btn_width//4,0),
-                                      (btn_width//4, btn_height)),
+            relative_rect=pygame.Rect((int(width - self.btn_width//8), 0),
+                                      (self.btn_width//8, btn_height//2)),
             text="",
             manager=self.ui_manager
         )
+
         self.menu_objects_button = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((width - int(btn_width // 1.5), height - btn_height),
-                                      (int(btn_width // 1.5), btn_height)),
+            relative_rect=pygame.Rect((width - int(self.btn_width // 1.5), height - btn_height),
+                                      (int(self.btn_width // 1.5), btn_height)),
             text="Постройки",
             manager=self.ui_manager
         )
+
         self.clock = pygame.time.Clock()
 
     def run(self, events):
@@ -608,6 +614,9 @@ class Interface:
 
     def draw(self):
         self.ui_manager.draw_ui(screen)
+        menu_actions_button_rect = self.menu_actions_button.relative_rect
+        screen.blit(self.button_image, menu_actions_button_rect.topleft)
+
 
 def init_game(new_game=False):
     global Board
