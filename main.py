@@ -579,10 +579,16 @@ class Interface:
         btn_height = int(height * 0.115)
         self.cell_size = cell_size
         self.ui_manager = pygame_gui.UIManager((width, height))
-        self.menu_button = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((width - btn_width//2, height - btn_height),
-                                      (btn_width//2, btn_height)),
+        self.menu_actions_button = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((width - btn_width//4,0),
+                                      (btn_width//4, btn_height)),
             text="",
+            manager=self.ui_manager
+        )
+        self.menu_objects_button = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((width - int(btn_width // 1.5), height - btn_height),
+                                      (int(btn_width // 1.5), btn_height)),
+            text="Постройки",
             manager=self.ui_manager
         )
         self.clock = pygame.time.Clock()
@@ -590,7 +596,7 @@ class Interface:
     def run(self, events):
         for event in events:
             self.ui_manager.process_events(event)
-            if event.type == pygame_gui.UI_BUTTON_PRESSED and event.ui_element == self.menu_button:
+            if event.type == pygame_gui.UI_BUTTON_PRESSED and event.ui_element == self.menu_actions_button:
                 print("Menu button pressed")
                 pygame.display.flip()
                 return False

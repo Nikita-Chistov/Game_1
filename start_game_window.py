@@ -63,7 +63,12 @@ class MainMenu:
                         if event.ui_element == self.start_game_btn:
                             self.start_game()
                         if event.ui_element == self.exit_button:
+                            self.exit_game()
                             self.running = False
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        self.exit_game()
+                        self.running = False
                 self.ui_manager.process_events(event)
             self.ui_manager.update(time_delta)
             self.ui_manager.draw_ui(self.screen)
