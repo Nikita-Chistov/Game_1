@@ -79,7 +79,7 @@ class MainMenu:
     def restart_game(self):
         print("Новая игра началась!")
         self.music.play(loops=-1)
-        init_game()
+        init_game(True)
 
     def exit_game(self):
         print("Выход из игры.")
