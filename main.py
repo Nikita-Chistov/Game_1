@@ -29,9 +29,9 @@ def get_resize_images(name, standart_size=(1, 1)):
             for image_name in sort_files:
                 image_path = os.path.join(root, image_name)
                 image = load_image(image_path)
-                pil_image = Image.frombytes('RGBA', image.get_size(), pygame.image.tostring(image, 'RGBA'))
+                pil_image = Image.frombytes('RGBA', image.get_size(), pygame.image.tobytes(image, 'RGBA'))
                 resized_image = pil_image.resize((size * standart_size[0], size * standart_size[1]), Image.LANCZOS)
-                resized_surface = pygame.image.fromstring(resized_image.tobytes(), resized_image.size, 'RGBA')
+                resized_surface = pygame.image.frombytes(resized_image.tobytes(), resized_image.size, 'RGBA')
                 resized_surface = resized_surface.convert_alpha()
                 orientation_images = []
                 for orientation in range(4):
@@ -86,7 +86,7 @@ class Bildings(pygame.sprite.Sprite):
             cls.current_sprite = cls.Patern_images[cls.Patern_delays.index(cls.capture)]
         if cls.capture == cls.Patern_delays[-1]:
             for sprite in cls.Sprite_group:
-                sprite.have_figure = sprite.check_have_figure()
+                sprite.have_figure = sprite.check_can_create()
                 if sprite.have_figure:
                     sprite.create_product()
 
@@ -113,17 +113,19 @@ class Bildings(pygame.sprite.Sprite):
         outputs = np.rot90(self.Outputs, 4 - orientation)
         inputs_figures = np.rot90(self.Input_Figures, 4 - orientation)
         numbers_cell = np.rot90(self.Numbes_cells, 4 - orientation)
-        print(inputs, outputs, inputs_figures, numbers_cell)
         for i in range(size[0]):
             for j in range(size[1]):
                 self.board.board[self.y + j][self.x + i] = self
-                if inputs[i][j] == 1:
-                    self.inputs[(self.x + i, self.y + j)] = (numbers_cell[i][j], inputs_figures[i][j])
-                if outputs[i][j] == 1:
-                    self.outputs[(self.x + i, self.y + j)] = numbers_cell[i][j]
+                if inputs[j][i] == 1:
+                    self.inputs[(self.x + i, self.y + j)] = (numbers_cell[j][i], inputs_figures[j][i])
+                if outputs[j][i] == 1:
+                    self.outputs[(self.x + i, self.y + j)] = numbers_cell[j][i]
+        self.inputs = dict(sorted(self.inputs.items(), key=lambda x: x[1][0]))
+        self.outputs = dict(sorted(self.outputs.items(), key=lambda x: x[1]))
 
-    def check_have_figure(self):
-        return all([self.board.figures_on_board[y][x] is not None for x, y in self.inputs.keys()])
+    def check_can_create(self):
+        return all([self.board.figures_on_board[y][x] is not None for x, y in self.inputs.keys()]) and all(
+            [self.board.figures_on_board[y][x].check_patern(self.inputs[(x, y)][1]) for x, y in self.inputs.keys()])
 
     def update_image(self):
         self.image = self.Sprite_images[self.board.cell_size][self.current_sprite][self.orientation]
@@ -132,7 +134,6 @@ class Bildings(pygame.sprite.Sprite):
         if args:
             if args[0].type == pygame.MOUSEBUTTONDOWN and (args[0].button == 4 or args[0].button == 5):
                 self.update_image()
-
         self.rect.x = self.x * self.board.cell_size + self.board.x
         self.rect.y = self.y * self.board.cell_size + self.board.y
         self.update_image()
@@ -160,7 +161,7 @@ class Belt(Bildings):
     current_sprite = 0
     Speed = BELT_SPEED
 
-    def check_have_figure(self):
+    def check_can_create(self):
         return True
 
 
@@ -178,7 +179,7 @@ class Factory(Bildings):
     Outputs = np.array([[1]])
     Size_input_Figures = [2]
 
-    def check_have_figure(self):
+    def check_can_create(self):
         return True
 
     def create_product(self):
@@ -203,7 +204,7 @@ class Hub(Bildings):
     Size_input_Figures = [2]
 
 
-class spliter(Bildings):
+class Spliter(Bildings):
     Size = (2, 1)
     Sprite_images = get_resize_images("conv", Size)
     Patern_delays = [0, 250]
@@ -217,10 +218,29 @@ class spliter(Bildings):
     Outputs = np.array([[1, 1]])
     Size_input_Figures = [2]
 
+    def check_can_create(self):
+        x, y = list(self.outputs.items())[1][0]
+        return super().check_can_create() and self.board.figures_on_board[y][x] is None
+
     def create_product(self):
-        figure = self.board.figures_on_board[self.y][self.x].componets
+        x_input = list(self.inputs.items())[0][0][0]
+        y_input = list(self.inputs.items())[0][0][1]
+        figure = self.board.figures_on_board[y_input][x_input].componets
+        self.board.figures_on_board[y_input][x_input] = None
+        zero_figure = np.array([
+            [(0, 0, 195, 205, 236), (0, 1, 195, 205, 236)],
+            [(0, 3, 195, 205, 236), (0, 2, 195, 205, 236)]
+        ])
+        zero_figure_left, zero_figure_right = np.hsplit(zero_figure, 2)
         figure_left, figure_right = np.hsplit(figure, 2)
-        print(figure_left, figure_right)
+        figure_left = np.concatenate((figure_left, zero_figure_right), axis=1)
+        figure_right = np.concatenate((zero_figure_left, figure_right), axis=1)
+        output_x_1 = list(self.outputs.items())[0][0][0]
+        output_y_1 = list(self.outputs.items())[0][0][1]
+        output_x_2 = list(self.outputs.items())[1][0][0]
+        output_y_2 = list(self.outputs.items())[1][0][1]
+        Figure(2, self.board, output_x_1, output_y_1, figure_left)
+        Figure(2, self.board, output_x_2, output_y_2, figure_right)
 
 
 class Figure():
@@ -250,6 +270,8 @@ class Figure():
         self.new_orientation()
         self.all_figures.append(self)
         self.stop = False
+        self.in_bilding = False
+        self.f_render = False
         patern = []
         for i in range(self.size):
             for j in range(self.size):
@@ -278,33 +300,51 @@ class Figure():
                 self.update_x_y = (-1, 0, 100, 0, 0, 1)
             self.orientation = self.board.board[self.y][self.x].orientation
 
+    def check_patern(self, patern):
+        print(patern)
+        print(self.patern)
+        for i in range(self.size):
+            for j in range(self.size):
+                print(patern.split(" ")[i][j], self.patern.split(" ")[i][j])
+                if patern.split(" ")[i][j] == "0" and self.patern.split(" ")[i][j] == "1":
+                    return False
+        return True
+    def
+
+
     def update_pos_on_board(self):
-        if self.__class__.сurrent_pos == 0 or self.__class__.сurrent_pos != 0 and self.stop:
-            next_x = self.x + self.update_x_y[0]
-            next_y = self.y + self.update_x_y[1]
-            f = False
-            if self.board.board[next_y][next_x].__class__ is Belt:
-                if self.board.board[next_y][next_x].orientation != (self.orientation + 2) % 4:
+        if not self.in_bilding:
+            if self.__class__.сurrent_pos == 0 or self.__class__.сurrent_pos != 0 and self.stop:
+                next_x = self.x + self.update_x_y[0]
+                next_y = self.y + self.update_x_y[1]
+                f = False
+                self.f_render = True
+                if self.board.board[next_y][next_x].__class__ is Belt:
+                    if self.board.board[next_y][next_x].orientation != (self.orientation + 2) % 4:
+                        if self.board.figures_on_board[next_y][next_x] is None:
+                            f = True
+                        else:
+                            if not self.board.figures_on_board[next_y][next_x].stop:
+                                f = True
+                elif self.board.board[next_y][next_x].__class__.__bases__[0] is Bildings:
                     if self.board.figures_on_board[next_y][next_x] is None:
-                        f = True
-                    else:
-                        if not self.board.figures_on_board[next_y][next_x].stop:
-                            f = True
-            elif self.board.board[next_y][next_x].__class__.__bases__[0] is Bildings:
-                if self.board.figures_on_board[next_y][next_x] is None:
-                    if (next_x, next_y) in self.board.board[next_y][next_x].inputs.keys():
-                        if self.board.board[next_y][next_x].inputs[(next_x, next_y)][1] == self.patern and self.size in \
-                                self.board.board[next_y][next_x].__class__.Size_input_Figures:
-                            f = True
-            if f:
-                self.stop = False
-                if self.board.figures_on_board[self.y][self.x] == self:
-                    self.board.figures_on_board[self.y][self.x] = None
-                self.x += self.update_x_y[0]
-                self.y += self.update_x_y[1]
-                self.board.figures_on_board[self.y][self.x] = self
-            else:
-                self.stop = True
+                        if (next_x, next_y) in self.board.board[next_y][next_x].inputs.keys():
+                            if self.check_patern(
+                                    self.board.board[next_y][next_x].inputs[(next_x, next_y)][1]) and self.size in \
+                                    self.board.board[next_y][next_x].__class__.Size_input_Figures:
+                                f = True
+                                self.in_bilding = True
+                                self.stop = True
+                                self.f_render = False
+                if f:
+                    self.stop = False
+                    if self.board.figures_on_board[self.y][self.x] == self:
+                        self.board.figures_on_board[self.y][self.x] = None
+                    self.x += self.update_x_y[0]
+                    self.y += self.update_x_y[1]
+                    self.board.figures_on_board[self.y][self.x] = self
+                else:
+                    self.stop = True
 
     def render_part_circle(self, x, y, size, orientation, color):
         radius = size
@@ -354,23 +394,24 @@ class Figure():
         screen.blit(surf, (x, y))
 
     def render(self):
-        centre = (self.x * self.board.cell_size + self.board.x + (
-                self.x_in_cell + 50 * self.update_x_y[4]) * self.board.cell_size // 100,
-                  self.y * self.board.cell_size + self.board.y + (
-                          self.y_in_cell + 50 * self.update_x_y[5]) * self.board.cell_size // 100)
-        # pygame.draw.rect(screen, (122, 0, 122), (self.x * self.board.cell_size + self.board.x, self.y * self.board.cell_size + self.board.y,self.board.cell_size, self.board.cell_size))
-        part_size = self.board.cell_size // 2 // self.size
-        x_n = part_size * self.size // 2
-        y_n = part_size * self.size // 2
-        for i in range(self.size):
-            for j in range(self.size):
-                if self.componets[j, i] is not None:
-                    if self.componets[j, i][0] == 1:
-                        self.render_part_circle(centre[0] - x_n + part_size * i, centre[1] - y_n + part_size * j,
-                                                part_size, self.componets[j, i][1], self.componets[j, i][2:5])
-                    if self.componets[j, i][0] == 2:
-                        self.render_part_square(centre[0] - x_n + part_size * i, centre[1] - y_n + part_size * j,
-                                                part_size, self.componets[j, i][1], self.componets[j, i][2:5])
+        if self.f_render:
+            centre = (self.x * self.board.cell_size + self.board.x + (
+                    self.x_in_cell + 50 * self.update_x_y[4]) * self.board.cell_size // 100,
+                      self.y * self.board.cell_size + self.board.y + (
+                              self.y_in_cell + 50 * self.update_x_y[5]) * self.board.cell_size // 100)
+            # pygame.draw.rect(screen, (122, 0, 122), (self.x * self.board.cell_size + self.board.x, self.y * self.board.cell_size + self.board.y,self.board.cell_size, self.board.cell_size))
+            part_size = self.board.cell_size // 2 // self.size
+            x_n = part_size * self.size // 2
+            y_n = part_size * self.size // 2
+            for i in range(self.size):
+                for j in range(self.size):
+                    if self.componets[j, i] is not None:
+                        if self.componets[j, i][0] == 1:
+                            self.render_part_circle(centre[0] - x_n + part_size * i, centre[1] - y_n + part_size * j,
+                                                    part_size, self.componets[j, i][1], self.componets[j, i][2:5])
+                        if self.componets[j, i][0] == 2:
+                            self.render_part_square(centre[0] - x_n + part_size * i, centre[1] - y_n + part_size * j,
+                                                    part_size, self.componets[j, i][1], self.componets[j, i][2:5])
 
     def update_pos(self):
         if not self.stop:
@@ -382,7 +423,7 @@ code_bildings = {
     Belt: BELT_CODE,
     Factory: FACTORY_CODE,
     Hub: HUB_CODE,
-    spliter: SPLITTER_CODE
+    Spliter: SPLITTER_CODE
 }
 
 
@@ -469,7 +510,7 @@ class Board:
             1: Belt,
             2: Factory,
             3: Hub,
-            4: spliter,
+            4: Spliter,
             5: Belt,
             6: Belt,
             7: Belt,
