@@ -37,8 +37,8 @@ class MainMenu:
                                       (btn_width, btn_height)),
             text="Выход",
             manager=self.ui_manager,
-            object_id = pygame_gui.core.ObjectID(class_id='#exit_button',
-                object_id='#exit_button'))
+            object_id = pygame_gui.core.ObjectID(class_id="#exit_button", object_id="#exit_button")
+        )
 
         self.clock = pygame.time.Clock()
         self.running = True

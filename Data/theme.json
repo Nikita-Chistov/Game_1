@@ -35,7 +35,30 @@
              "name": "Ink Free",
              "size": "20"
          }
+    },
+    "#main_button": {
+        "colours": {
+            "normal_bg": "rgba(0,0,0,0)",
+            "hovered_bg": "rgba(0,0,0,0)",
+            "disabled_bg": "rgba(0,0,0,0)",
+            "selected_bg": "rgba(0,0,0,0)",
+            "dark_bg": "rgba(0,0,0,0)"
+        },
+        "misc": {
+            "shadow_width": "0",
+            "shape": "rectangle"
+        },
+        "font": {
+            "name": "Comic Sans MS",
+            "size": "18",
+            "colour": "#FFFFFF"
+        }
+    },
+    "#construction_button": {
+        "font":
+         {
+             "name": "Comic Sans MS",
+             "size": "20"
+         }
     }
-
-
 }

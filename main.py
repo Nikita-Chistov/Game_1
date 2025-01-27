@@ -578,23 +578,25 @@ class Interface:
         self.btn_width = int(width * 0.25)
         btn_height = int(height * 0.115)
         self.cell_size = cell_size
-        self.ui_manager = pygame_gui.UIManager((width, height))
+        self.ui_manager = pygame_gui.UIManager((width, height), "Data/theme.json")
 
         button_image = pygame.image.load("Data/Sprites/Button/menu_objects.png").convert_alpha()
         self.button_image = pygame.transform.scale(button_image, (self.btn_width//8, btn_height//2))  # Подгоните размер изображения под кнопку
 
         self.menu_actions_button = pygame_gui.elements.UIButton(
             relative_rect=pygame.Rect((int(width - self.btn_width//8), 0),
-                                      (self.btn_width//8, btn_height//2)),
+                                      (int(self.btn_width//7), btn_height//2)),
             text="",
-            manager=self.ui_manager
+            manager=self.ui_manager,
+            object_id=pygame_gui.core.ObjectID(class_id="#main_button", object_id="#main_button")
         )
 
         self.menu_objects_button = pygame_gui.elements.UIButton(
             relative_rect=pygame.Rect((width - int(self.btn_width // 1.5), height - btn_height),
                                       (int(self.btn_width // 1.5), btn_height)),
             text="Постройки",
-            manager=self.ui_manager
+            manager=self.ui_manager,
+            object_id=pygame_gui.core.ObjectID(class_id="#construction_button", object_id="#construction_button")
         )
 
         self.clock = pygame.time.Clock()
