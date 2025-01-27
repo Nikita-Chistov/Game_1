@@ -59,6 +59,10 @@
          {
              "name": "Comic Sans MS",
              "size": "20"
-         }
+         },
+        "misc": {
+            "shadow_width": "0",
+            "shape": "rectangle"
+        }
     }
 }

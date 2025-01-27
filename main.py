@@ -599,15 +599,61 @@ class Interface:
             object_id=pygame_gui.core.ObjectID(class_id="#construction_button", object_id="#construction_button")
         )
 
-        self.clock = pygame.time.Clock()
+        self.menu_x = int(width - self.btn_width//8) - int(self.btn_width // 3.75) - int(self.btn_width * 0.15)
+        self.menu_y = 0
+        self.menu_width = int(self.btn_width // 5)
+        self.menu_expanded = False
+        self.stop_button = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect(self.menu_x , self.menu_y, self.menu_width,
+                                      btn_height // 2),
+            text="Стоп",
+            manager=self.ui_manager,
+            object_id=pygame_gui.core.ObjectID(class_id="#construction_button", object_id="#construction_button")
+        )
+        self.exit_button = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect(self.menu_x + int(self.btn_width * 0.215), self.menu_y, self.menu_width,
+                                      btn_height // 2),
+            text="Выход",
+            manager=self.ui_manager,
+            object_id=pygame_gui.core.ObjectID(class_id="#construction_button", object_id="#construction_button")
+        )
 
-    def run(self, events):
+        self.clock = pygame.time.Clock()
+        self.update_buttons_visibility()
+
+    def toggle_menu(self):
+        self.menu_expanded = not self.menu_expanded
+        self.update_buttons_visibility()
+
+    def update_buttons_visibility(self):
+        if self.menu_expanded:
+            self.exit_button.show()
+            self.stop_button.show()
+        else:
+            self.exit_button.hide()
+            self.stop_button.hide()
+
+    def handle_button_click(self, button):
+        if button == self.stop_button:
+            print("Игра стоп!")
+        elif button == self.exit_button:
+            return False
+        return True
+
+
+    def run(self, events, pos):
         for event in events:
             self.ui_manager.process_events(event)
             if event.type == pygame_gui.UI_BUTTON_PRESSED and event.ui_element == self.menu_actions_button:
-                print("Menu button pressed")
-                pygame.display.flip()
-                return False
+                self.toggle_menu()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if self.menu_expanded:
+                    if self.stop_button.rect.collidepoint(pos):
+                        pygame.display.flip()
+                        self.handle_button_click(self.stop_button)
+                    elif self.exit_button.rect.collidepoint(pos):
+                        pygame.display.flip()
+                        return self.handle_button_click(self.exit_button)
         pygame.display.flip()
         return True
 
@@ -654,7 +700,7 @@ def init_game(new_game=False):
                 Board.update("resize", event)
             if event.type == pygame.KEYDOWN:
                 Board.update("keydown", event)
-        running = interface.run(events)
+        running = interface.run(events, pygame.mouse.get_pos())
         if pygame.mouse.get_pressed():
             Board.update("MouseButton_pressed", pygame.mouse.get_pressed())
         render_count = (render_count + 1) % 1
