@@ -225,6 +225,27 @@ class spliter(Bildings):
         figure_left, figure_right = np.hsplit(figure, 2)
         print(figure_left, figure_right)
 
+class painting(Bildings):
+    Size = (1,1)
+    Sprite_images = get_resize_images("painting", Size)
+    Patern_delays = [0, 250]
+    Patern_images = [0, 0]
+    capture = 0
+    current_sprite = 0
+    Speed = 1
+    Inputs = np.array([[1]])
+    Numbes_cells = np.array([[1]])
+    Input_Figures = np.array([["11 11"]])
+    Outputs = np.array([[1]])
+    Size_input_Figures = [2]
+
+    def create_product(self):
+        figure = self.board.figures_on_board[self.y][self.x].componets
+        new_color = (255, 0, 0)
+        for row in range(figure.size):
+            for col in range(figure.size):
+                figure[row, col, 2:-1] = new_color
+
 
 class Figure():
     сurrent_pos = 0
@@ -473,7 +494,7 @@ class Board:
             2: Factory,
             3: Hub,
             4: spliter,
-            5: Belt,
+            5: painting,
             6: Belt,
             7: Belt,
             8: Belt,
