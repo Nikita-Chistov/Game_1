@@ -22,6 +22,8 @@ phantom_bilds = pygame.sprite.Group()
 
 def get_resize_images(name, standart_size=(1, 1)):
     images = {}
+    if name == "Connector":
+        print()
     for size in range(MIN_CELL_SIZE - ZOOM_SPEED, MAX_CELL_SIZE + ZOOM_SPEED, ZOOM_SPEED):
         size_images = []
         for root, _, files in os.walk(os.path.join("Data", "Sprites", name)):
@@ -78,6 +80,7 @@ class Bildings(pygame.sprite.Sprite):
     Input_Figures = np.array([["11 11"]])
     Outputs = np.array([[1]])
     Size_input_Figures = [2]
+    Inputs_orientation = np.array([[0]])
 
     @classmethod
     def Update_animation(cls):
@@ -113,11 +116,16 @@ class Bildings(pygame.sprite.Sprite):
         outputs = np.rot90(self.Outputs, 4 - orientation)
         inputs_figures = np.rot90(self.Input_Figures, 4 - orientation)
         numbers_cell = np.rot90(self.Numbes_cells, 4 - orientation)
+        inputs_orientation = np.rot90(self.Inputs_orientation.copy(), 4 - orientation)
+        for i in range(size[0]):
+            for j in range(size[1]):
+                inputs_orientation[j][i] = (inputs_orientation[j][i] + orientation) % 4
         for i in range(size[0]):
             for j in range(size[1]):
                 self.board.board[self.y + j][self.x + i] = self
                 if inputs[j][i] == 1:
-                    self.inputs[(self.x + i, self.y + j)] = (numbers_cell[j][i], inputs_figures[j][i])
+                    self.inputs[(self.x + i, self.y + j)] = (
+                    numbers_cell[j][i], inputs_figures[j][i], inputs_orientation[j][i])
                 if outputs[j][i] == 1:
                     self.outputs[(self.x + i, self.y + j)] = numbers_cell[j][i]
         self.inputs = dict(sorted(self.inputs.items(), key=lambda x: x[1][0]))
@@ -165,6 +173,14 @@ class Belt(Bildings):
         return True
 
 
+class BeltLeft(Belt):
+    Sprite_images = get_resize_images("BeltLeft")
+
+
+class BeltRight(Belt):
+    Sprite_images = get_resize_images("BeltRight")
+
+
 class Factory(Bildings):
     Sprite_images = get_resize_images("Factory")
     Size = (1, 1)
@@ -178,9 +194,10 @@ class Factory(Bildings):
     Input_Figures = np.array([["11 11"]])
     Outputs = np.array([[1]])
     Size_input_Figures = [2]
+    Inputs_orientation = np.array([[0]])
 
     def check_can_create(self):
-        return True
+        return self.board.figures_on_board[self.y][self.x] is None
 
     def create_product(self):
         self.board.figures_on_board[self.y][self.x] = Figure(2, self.board, self.x, self.y, np.array([
@@ -200,13 +217,14 @@ class Hub(Bildings):
     Numbes_cells = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
     Inputs = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]])
     Input_Figures = np.array([["", "11 11", ""], ["11 11", "", "11 11"], ["", "11 11", ""]])
+    Inputs_orientation = np.array([[0, 2, 0], [1, 0, 3], [0, 0, 0]])
     Outputs = np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0]])
     Size_input_Figures = [2]
 
 
 class Spliter(Bildings):
     Size = (2, 1)
-    Sprite_images = get_resize_images("conv", Size)
+    Sprite_images = get_resize_images("Spliter", Size)
     Patern_delays = [0, 250]
     Patern_images = [0, 0]
     capture = 0
@@ -214,6 +232,7 @@ class Spliter(Bildings):
     Speed = 1
     Numbes_cells = np.array([[1, 2]])
     Inputs = np.array([[1, 0]])
+    Inputs_orientation = np.array([[0, 0]])
     Input_Figures = np.array([["11 11", ""]])
     Outputs = np.array([[1, 1]])
     Size_input_Figures = [2]
@@ -243,6 +262,60 @@ class Spliter(Bildings):
         Figure(2, self.board, output_x_2, output_y_2, figure_right)
 
 
+class Deleter(Bildings):
+    Size = (1, 1)
+    Sprite_images = get_resize_images("Deleter", Size)
+    Patern_delays = [0, 250]
+    Patern_images = [0, 0]
+    capture = 0
+    current_sprite = 0
+    Speed = 1
+    Numbes_cells = np.array([[1]])
+    Inputs = np.array([[1]])
+    Inputs_orientation = np.array([[0]])
+    Input_Figures = np.array([["11 11"]])
+    Outputs = np.array([[0]])
+    Size_input_Figures = [2, 4]
+
+    def check_can_create(self):
+        return True
+
+    def create_product(self):
+        x_input = list(self.inputs.items())[0][0][0]
+        y_input = list(self.inputs.items())[0][0][1]
+        self.board.figures_on_board[y_input][x_input] = None
+
+class Connector(Bildings):
+    Size = (2, 1)
+    Sprite_images = get_resize_images("Сonnector", Size)
+    Patern_delays = [0, 250]
+    Patern_images = [0, 0]
+    capture = 0
+    current_sprite = 0
+    Speed = 1
+    Numbes_cells = np.array([[1, 2]])
+    Inputs = np.array([[1, 1]])
+    Inputs_orientation = np.array([[0, 0]])
+    Input_Figures = np.array([["11 00", "00 11"]])
+    Outputs = np.array([[1, 0]])
+    Size_input_Figures = [2]
+
+    def create_product(self):
+        x_input_1 = list(self.inputs.items())[0][0][0]
+        y_input_1 = list(self.inputs.items())[0][0][1]
+        x_input_2 = list(self.inputs.items())[1][0][0]
+        y_input_2 = list(self.inputs.items())[1][0][1]
+        figure_left = self.board.figures_on_board[y_input_1][x_input_1].componets
+        figure_right = self.board.figures_on_board[y_input_2][x_input_2].componets
+        figure = np.concatenate((figure_left, figure_right), axis=1)
+        x_output = list(self.outputs.items())[0][0][0]
+        y_output = list(self.outputs.items())[0][0][1]
+        Figure(2, self.board, x_output, y_output, figure)
+
+
+
+
+
 class Figure():
     сurrent_pos = 0
     all_figures = []
@@ -255,6 +328,7 @@ class Figure():
                 figure.update_pos_on_board()
         elif cls.сurrent_pos == 50:
             for figure in cls.all_figures:
+                figure.check_can_render()
                 figure.new_orientation()
 
     def __init__(self, size, board, x, y, figure: np.array):
@@ -301,16 +375,17 @@ class Figure():
             self.orientation = self.board.board[self.y][self.x].orientation
 
     def check_patern(self, patern):
-        print(patern)
-        print(self.patern)
         for i in range(self.size):
             for j in range(self.size):
-                print(patern.split(" ")[i][j], self.patern.split(" ")[i][j])
                 if patern.split(" ")[i][j] == "0" and self.patern.split(" ")[i][j] == "1":
                     return False
         return True
-    def
 
+    def check_can_render(self):
+        if not self.in_bilding:
+            self.f_render = True
+        else:
+            self.f_render = False
 
     def update_pos_on_board(self):
         if not self.in_bilding:
@@ -318,9 +393,22 @@ class Figure():
                 next_x = self.x + self.update_x_y[0]
                 next_y = self.y + self.update_x_y[1]
                 f = False
-                self.f_render = True
                 if self.board.board[next_y][next_x].__class__ is Belt:
-                    if self.board.board[next_y][next_x].orientation != (self.orientation + 2) % 4:
+                    if self.board.board[next_y][next_x].orientation == self.orientation:
+                        if self.board.figures_on_board[next_y][next_x] is None:
+                            f = True
+                        else:
+                            if not self.board.figures_on_board[next_y][next_x].stop:
+                                f = True
+                elif self.board.board[next_y][next_x].__class__ is BeltLeft:
+                    if (self.board.board[next_y][next_x].orientation + 1) % 4 == self.orientation:
+                        if self.board.figures_on_board[next_y][next_x] is None:
+                            f = True
+                        else:
+                            if not self.board.figures_on_board[next_y][next_x].stop:
+                                f = True
+                elif self.board.board[next_y][next_x].__class__ is BeltRight:
+                    if (self.board.board[next_y][next_x].orientation + 3) % 4 == self.orientation:
                         if self.board.figures_on_board[next_y][next_x] is None:
                             f = True
                         else:
@@ -332,10 +420,10 @@ class Figure():
                             if self.check_patern(
                                     self.board.board[next_y][next_x].inputs[(next_x, next_y)][1]) and self.size in \
                                     self.board.board[next_y][next_x].__class__.Size_input_Figures:
-                                f = True
-                                self.in_bilding = True
-                                self.stop = True
-                                self.f_render = False
+                                if self.orientation == self.board.board[next_y][next_x].inputs[(next_x, next_y)][2]:
+                                    f = True
+                                    self.in_bilding = True
+                                    self.stop = True
                 if f:
                     self.stop = False
                     if self.board.figures_on_board[self.y][self.x] == self:
@@ -421,9 +509,14 @@ class Figure():
 
 code_bildings = {
     Belt: BELT_CODE,
+    BeltRight: BELT_RIGHT_CODE,
+    BeltLeft: BELT_LEFT_CODE,
     Factory: FACTORY_CODE,
     Hub: HUB_CODE,
-    Spliter: SPLITTER_CODE
+    Spliter: SPLITTER_CODE,
+    Deleter: DELETER_CODE,
+    Connector: CONNECTOR_CODE,
+
 }
 
 
@@ -456,7 +549,8 @@ class Board:
                                       int(self.cell_size), int(self.cell_size)), 1)
                     if 0 <= row < self.height and 0 <= col < self.width:
                         if self.board[row][col] is not None:
-                            if self.board[row][col].__class__ is Belt:
+                            if self.board[row][col].__class__ is Belt or self.board[row][col].__class__ is BeltLeft or \
+                                    self.board[row][col].__class__ is BeltRight:
                                 viev_belt.add(self.board[row][col])
                             else:
                                 viev_sprites.add(self.board[row][col])
@@ -508,12 +602,12 @@ class Board:
         bildings_panel = {
             0: Belt,
             1: Belt,
-            2: Factory,
-            3: Hub,
-            4: Spliter,
-            5: Belt,
-            6: Belt,
-            7: Belt,
+            2: BeltLeft,
+            3: BeltRight,
+            4: Factory,
+            5: Spliter,
+            6: Connector,
+            7: Deleter,
             8: Belt,
             9: Belt,
         }
