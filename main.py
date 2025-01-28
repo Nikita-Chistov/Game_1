@@ -1,4 +1,7 @@
 import math
+
+from matplotlib.pyplot import figure
+
 from settings import *
 import numpy as np
 import pygame
@@ -6,15 +9,13 @@ import os
 import sys
 import random
 from PIL import Image
-import pygame_gui
 
 pygame.init()
 pygame.font.init()
 clock = pygame.time.Clock()
 pygame.display.set_caption('RTKY')
-display_info = pygame.display.Info()
-size = width, height = (display_info.current_w, display_info.current_h)
-screen = pygame.display.set_mode(size, pygame.FULLSCREEN)
+size = width, height = 500, 500
+screen = pygame.display.set_mode(size, pygame.RESIZABLE)
 font = pygame.font.SysFont(None, 30)
 no_effectiveness_update = True
 render_count = 0
@@ -24,6 +25,7 @@ phantom_bilds = pygame.sprite.Group()
 
 def get_resize_images(name, standart_size=(1, 1)):
     images = {}
+    print(list(os.walk(os.path.join("Data", "Sprites"))))
     for size in range(MIN_CELL_SIZE - ZOOM_SPEED, MAX_CELL_SIZE + ZOOM_SPEED, ZOOM_SPEED):
         size_images = []
         for root, _, files in os.walk(os.path.join("Data", "Sprites", name)):
@@ -84,6 +86,8 @@ class Bildings(pygame.sprite.Sprite):
 
     @classmethod
     def Update_animation(cls):
+        if str(cls) == str(Factory):
+            print(cls.capture)
         cls.capture = (cls.capture + cls.Speed) % (cls.Patern_delays[-1] + 1)
         if cls.capture in cls.Patern_delays:
             cls.current_sprite = cls.Patern_images[cls.Patern_delays.index(cls.capture)]
@@ -125,7 +129,7 @@ class Bildings(pygame.sprite.Sprite):
                 self.board.board[self.y + j][self.x + i] = self
                 if inputs[j][i] == 1:
                     self.inputs[(self.x + i, self.y + j)] = (
-                    numbers_cell[j][i], inputs_figures[j][i], inputs_orientation[j][i])
+                        numbers_cell[j][i], inputs_figures[j][i], inputs_orientation[j][i])
                 if outputs[j][i] == 1:
                     self.outputs[(self.x + i, self.y + j)] = numbers_cell[j][i]
         self.inputs = dict(sorted(self.inputs.items(), key=lambda x: x[1][0]))
@@ -133,7 +137,8 @@ class Bildings(pygame.sprite.Sprite):
 
     def check_can_create(self):
         return all([self.board.figures_on_board[y][x] is not None for x, y in self.inputs.keys()]) and all(
-            [self.board.figures_on_board[y][x].check_patern(self.inputs[(x, y)][1]) for x, y in self.inputs.keys()])
+            [self.board.figures_on_board[y][x].check_patern(self.inputs[(x, y)][1]) for x, y in
+             self.inputs.keys()]) and all([self.board.figures_on_board[y][x].in_bilding for x, y in self.inputs.keys()])
 
     def update_image(self):
         self.image = self.Sprite_images[self.board.cell_size][self.current_sprite][self.orientation]
@@ -160,6 +165,7 @@ class Bildings(pygame.sprite.Sprite):
 
 class Belt(Bildings):
     Sprite_images = get_resize_images("Belt")
+    Sprite_group = pygame.sprite.Group()
     Size = (1, 1)
     Patern_delays = list(range(0, 100, 1))
     Patern_images = list(range(0, 100, 1))
@@ -175,14 +181,49 @@ class Belt(Bildings):
 
 class BeltLeft(Belt):
     Sprite_images = get_resize_images("BeltLeft")
+    Sprite_group = pygame.sprite.Group()
 
 
 class BeltRight(Belt):
     Sprite_images = get_resize_images("BeltRight")
+    Sprite_group = pygame.sprite.Group()
+
+
+class BeltConnector(Bildings):
+    Size = (2, 1)
+    Sprite_images = get_resize_images("BeltConnector", Size)
+    Sprite_group = pygame.sprite.Group()
+    Patern_delays = [0, 50]
+    Patern_images = [0, 0]
+    capture = 0
+    current_sprite = 0
+    Speed = 1
+    Numbes_cells = np.array([[1, 2]])
+    Inputs = np.array([[1, 1]])
+    Inputs_orientation = np.array([[0, 0]])
+    Input_Figures = np.array([["11 11", "11 11"]])
+    Outputs = np.array([[1, 0]])
+    Size_input_Figures = [2, 4]
+    def check_can_create(self):
+        return any([self.board.figures_on_board[y][x] is not None and self.board.figures_on_board[y][x].in_bilding for x, y in self.inputs.keys()])
+    def create_product(self):
+        x_output, y_output = list(self.outputs.keys())[0]
+        for x, y in self.inputs.keys():
+            if self.board.figures_on_board[y][x] is not None:
+                if x == x_output and y == y_output:
+                    self.board.figures_on_board[y][x].in_bilding = False
+                    self.board.figures_on_board[y][x].f_render = True
+                    self.board.figures_on_board[y][x].stop = False
+                else:
+                    if self.board.figures_on_board[y_output][x_output] is None:
+                        figure = self.board.figures_on_board[y][x].componets
+                        self.board.figures_on_board[y][x] = None
+                        Figure(2, self.board, x_output, y_output, figure)
 
 
 class Factory(Bildings):
     Sprite_images = get_resize_images("Factory")
+    Sprite_group = pygame.sprite.Group()
     Size = (1, 1)
     Patern_delays = [0, 300]
     Patern_images = [0, 0]
@@ -202,13 +243,14 @@ class Factory(Bildings):
     def create_product(self):
         self.board.figures_on_board[self.y][self.x] = Figure(2, self.board, self.x, self.y, np.array([
             [(1, 0, 195, 205, 236), (1, 1, 195, 205, 236)],
-            [(1, 3, 195, 205, 236), (1, 2, 195, 205, 236)]
+            [(2, 3, 195, 205, 236), (1, 2, 195, 205, 236)]
         ]))
 
 
 class Hub(Bildings):
     Size = (3, 3)
     Sprite_images = get_resize_images("Hub", Size)
+    Sprite_group = pygame.sprite.Group()
     Patern_delays = [0, 250]
     Patern_images = [0, 0]
     capture = 0
@@ -219,12 +261,20 @@ class Hub(Bildings):
     Input_Figures = np.array([["", "11 11", ""], ["11 11", "", "11 11"], ["", "11 11", ""]])
     Inputs_orientation = np.array([[0, 2, 0], [1, 0, 3], [0, 0, 0]])
     Outputs = np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0]])
-    Size_input_Figures = [2]
+    Size_input_Figures = [2, 4]
+
+    def create_product(self):
+        for x, y in self.outputs.keys():
+            if self.board.figures_on_board[y][x] is not None:
+                figure = self.board.figures_on_board[y][x].componets
+                #data.get_figure(figure)
+                pass
 
 
 class Spliter(Bildings):
     Size = (2, 1)
     Sprite_images = get_resize_images("Spliter", Size)
+    Sprite_group = pygame.sprite.Group()
     Patern_delays = [0, 250]
     Patern_images = [0, 0]
     capture = 0
@@ -261,49 +311,12 @@ class Spliter(Bildings):
         Figure(2, self.board, output_x_1, output_y_1, figure_left)
         Figure(2, self.board, output_x_2, output_y_2, figure_right)
 
-class Painting(Bildings):
-    Size = (2, 2)
-    Sprite_images = get_resize_images("Painting", Size)
-    Patern_delays = [0, 250]
-    Patern_images = [0, 0]
-    capture = 0
-    current_sprite = 0
-    Speed = 1
-    Inputs = np.array([[0, 0], [1,0]])
-    Inputs_orientation = np.array([[0, 0], [0,0]])
-    Numbes_cells = np.array([[1,2],[3,4]])
-    Input_Figures = np.array([["", ""], ["11 11",""]])
-    Outputs = np.array([[1, 0], [0, 0]])
-    Size_input_Figures = [2]
-    Sprite_group = pygame.sprite.Group()
-
-    def __init__(self, board, x, y, orientation):
-        super().__init__(board, x, y, orientation)
-        self.colour = ""
-
-
-    def check_can_create(self):
-        x, y = list(self.outputs.items())[0][0]
-        return super().check_can_create() and self.board.figures_on_board[y][x] is None
-
-
-    def create_product(self):
-        x_input = list(self.inputs.items())[0][0][0]
-        y_input = list(self.inputs.items())[0][0][1]
-        figure = self.board.figures_on_board[y_input][x_input].componets
-        new_color = (255, 0, 0)
-        for row in range(figure.shape[0]):
-            for col in range(figure.shape[1]):
-                figure[row, col][2:] = new_color
-        x_output = list(self.outputs.items())[0][0][0]
-        y_output = list(self.outputs.items())[0][0][1]
-        Figure(2, self.board, x_output, y_output, figure)
-        self.board.figures_on_board[y_input][x_input] = None
 
 class Deleter(Bildings):
     Size = (1, 1)
     Sprite_images = get_resize_images("Deleter", Size)
-    Patern_delays = [0, 250]
+    Sprite_group = pygame.sprite.Group()
+    Patern_delays = [0, 50]
     Patern_images = [0, 0]
     capture = 0
     current_sprite = 0
@@ -323,9 +336,11 @@ class Deleter(Bildings):
         y_input = list(self.inputs.items())[0][0][1]
         self.board.figures_on_board[y_input][x_input] = None
 
+
 class Connector(Bildings):
     Size = (2, 1)
-    Sprite_images = get_resize_images("Сonnector", Size)
+    Sprite_images = get_resize_images("Сonneсtor", Size)
+    Sprite_group = pygame.sprite.Group()
     Patern_delays = [0, 250]
     Patern_images = [0, 0]
     capture = 0
@@ -334,7 +349,7 @@ class Connector(Bildings):
     Numbes_cells = np.array([[1, 2]])
     Inputs = np.array([[1, 1]])
     Inputs_orientation = np.array([[0, 0]])
-    Input_Figures = np.array([["11 00", "00 11"]])
+    Input_Figures = np.array([["10 10", "01 01"]])
     Outputs = np.array([[1, 0]])
     Size_input_Figures = [2]
 
@@ -343,16 +358,70 @@ class Connector(Bildings):
         y_input_1 = list(self.inputs.items())[0][0][1]
         x_input_2 = list(self.inputs.items())[1][0][0]
         y_input_2 = list(self.inputs.items())[1][0][1]
+        print(x_input_1, y_input_1, x_input_2, y_input_2)
         figure_left = self.board.figures_on_board[y_input_1][x_input_1].componets
         figure_right = self.board.figures_on_board[y_input_2][x_input_2].componets
+        self.board.figures_on_board[y_input_1][x_input_1] = None
+        self.board.figures_on_board[y_input_2][x_input_2] = None
+        figure_left = np.hsplit(figure_left, 2)[0]
+        figure_right = np.hsplit(figure_right, 2)[1]
         figure = np.concatenate((figure_left, figure_right), axis=1)
         x_output = list(self.outputs.items())[0][0][0]
         y_output = list(self.outputs.items())[0][0][1]
         Figure(2, self.board, x_output, y_output, figure)
 
 
+class Rotator(Bildings):
+    Size = (1, 1)
+    Sprite_images = get_resize_images("Rotator", Size)
+    Sprite_group = pygame.sprite.Group()
+    Patern_delays = [0, 250]
+    Patern_images = [0, 0]
+    capture = 0
+    current_sprite = 0
+    Speed = 1
+    Numbes_cells = np.array([[1]])
+    Inputs = np.array([[1]])
+    Inputs_orientation = np.array([[0]])
+    Input_Figures = np.array([["11 11"]])
+    Outputs = np.array([[0]])
+    Size_input_Figures = [2]
+
+    def create_product(self):
+        x_input = list(self.inputs.items())[0][0][0]
+        y_input = list(self.inputs.items())[0][0][1]
+        figure = self.board.figures_on_board[y_input][x_input].componets
+        figure = np.rot90(figure, 3)
+        for i in range(figure.shape[0]):
+            for j in range(figure.shape[1]):
+                figure[i][j][1] = (figure[i][j][1] + 1) % 4
+        Figure(2, self.board, x_input, y_input, figure)
 
 
+# class Asembler(Bildings):
+#     Size = (2, 2)
+#     Sprite_images = get_resize_images("Assembler", Size)
+#     Sprite_group = pygame.sprite.Group()
+#     Patern_delays = [0, 250]
+#     Patern_images = [0, 0]
+#     capture = 0
+#     current_sprite = 0
+#     Speed = 1
+#     Numbes_cells = np.array([[1, 2], [3, 4]])
+#     Inputs = np.array([[1, 1], [1, 1]])
+#     Inputs_orientation = np.array([[1, 3], [1, 3]])
+#     Input_Figures = np.array([["11 11", "11 11"], ["11 11", "11 11"]])
+#     Outputs = np.array([[1, 0], [0, 0]])
+#     Size_input_Figures = [2]
+
+    # def create_product(self):
+    #     figures = [self.board.figures_on_board[y][x].componets for x, y in self.inputs.items()]
+    #     up = np.concatenate((figures[0], figures[1]), axis=1)
+    #     down = np.concatenate((figures[2], figures[3]), axis=1)
+    #     new_figure = np.concatenate((up, down), axis=0)
+    #     x_output = list(self.outputs.items())[0][0][0]
+    #     y_output = list(self.outputs.items())[0][0][1]
+    #     Figure(4, self.board, x_output, y_output, new_figure)
 
 class Figure():
     сurrent_pos = 0
@@ -554,6 +623,8 @@ code_bildings = {
     Spliter: SPLITTER_CODE,
     Deleter: DELETER_CODE,
     Connector: CONNECTOR_CODE,
+    Rotator: ROTATOR_CODE
+
 
 }
 
@@ -646,8 +717,8 @@ class Board:
             5: Spliter,
             6: Connector,
             7: Deleter,
-            8: Painting,
-            9: Belt,
+            8: Rotator,
+            9: BeltConnector,
         }
         if self.currect_bild == bildings_panel[key]:
             self.currect_bild = None
@@ -740,142 +811,12 @@ class Board:
                         if self.board[i][j] is None:
                             reverse_code_bildings[code_board[i][j][0]](self, j, i, code_board[i][j][1])
 
-class Interface:
-    def __init__(self, width, height, cell_size=40):
-        self.width = width
-        self.height = height
-        self.btn_width = int(width * 0.25)
-        self.btn_height = int(height * 0.115)
-        self.cell_size = cell_size
-        self.ui_manager = pygame_gui.UIManager((width, height), "Data/theme.json")
-
-        button_image = pygame.image.load("Data/Sprites/Button/menu_objects.png").convert_alpha()
-        self.button_image = pygame.transform.scale(button_image, (self.btn_width//8, self.btn_height//2))  # Подгоните размер изображения под кнопку
-
-        self.menu_actions_button = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((int(width - self.btn_width//8), 0),
-                                      (int(self.btn_width//7), self.btn_height//2)),
-            text="",
-            manager=self.ui_manager,
-            object_id=pygame_gui.core.ObjectID(class_id="#main_button", object_id="#main_button")
-        )
-
-        self.menu_objects_button = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((width - int(self.btn_width // 1.5), height - self.btn_height),
-                                      (int(self.btn_width // 1.5), self.btn_height)),
-            text="Постройки",
-            manager=self.ui_manager,
-            object_id=pygame_gui.core.ObjectID(class_id="#construction_button", object_id="#construction_button")
-        )
-
-        self.menu_x = int(width - self.btn_width//8) - int(self.btn_width // 3.75) - int(self.btn_width * 0.15)
-        self.menu_y = 0
-        self.menu_width = int(self.btn_width // 5)
-        self.menu_expanded = False
-        self.stop_button = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect(self.menu_x , self.menu_y, self.menu_width,
-                                      self.btn_height // 2),
-            text="Стоп",
-            manager=self.ui_manager,
-            object_id=pygame_gui.core.ObjectID(class_id="#construction_button", object_id="#construction_button")
-        )
-        self.exit_button = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect(self.menu_x + int(self.btn_width * 0.215), self.menu_y, self.menu_width,
-                                      self.btn_height // 2),
-            text="Выход",
-            manager=self.ui_manager,
-            object_id=pygame_gui.core.ObjectID(class_id="#construction_button", object_id="#construction_button")
-        )
-
-        self.clock = pygame.time.Clock()
-        self.update_buttons_visibility()
-
-    def toggle_menu(self):
-        self.menu_expanded = not self.menu_expanded
-        self.update_buttons_visibility()
-
-    def update_buttons_visibility(self):
-        if self.menu_expanded:
-            self.exit_button.show()
-            self.stop_button.show()
-        else:
-            self.exit_button.hide()
-            self.stop_button.hide()
-
-    def handle_button_click(self, button):
-        if button == self.stop_button:
-            return self.stop()
-        elif button == self.exit_button:
-            return False
-        return True
-
-
-    def stop(self):
-        self.menu_actions_button.hide()
-        self.menu_objects_button.hide()
-        self.exit_button.hide()
-        self.stop_button.hide()
-        screen.fill((141, 148, 165))
-        btn_width = int(self.width * 0.25)
-        btn_height = int(self.height * 0.115)
-        btn_x_center = self.width // 2 - btn_width // 2
-        resume_button = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((int(btn_x_center), int(self.height * 0.3)), (btn_width, btn_height)),
-            text="Продолжить",
-            manager=self.ui_manager)
-        exit2_button = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((int(btn_x_center), int(self.height * 0.45)), (btn_width, btn_height)),
-            text="Завершить",
-            manager=self.ui_manager)
-        while True:
-            time_delta = clock.tick(60) / 1000.0
-            screen.fill((141, 148, 165))
-            for event in pygame.event.get():
-                self.ui_manager.process_events(event)
-                if event.type == pygame_gui.UI_BUTTON_PRESSED and event.ui_element == resume_button:
-                    resume_button.hide()
-                    exit2_button.hide()
-                    self.menu_actions_button.show()
-                    self.menu_objects_button.show()
-                    return True
-                if event.type == pygame_gui.UI_BUTTON_PRESSED and event.ui_element == exit2_button:
-                    resume_button.hide()
-                    exit2_button.hide()
-                    return False
-            self.ui_manager.update(time_delta)
-            self.ui_manager.draw_ui(screen)
-            pygame.display.flip()
-
-    def run(self, events, pos):
-        for event in events:
-            self.ui_manager.process_events(event)
-            if event.type == pygame_gui.UI_BUTTON_PRESSED and event.ui_element == self.menu_actions_button:
-                self.toggle_menu()
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if self.menu_expanded:
-                    if self.stop_button.rect.collidepoint(pos):
-                        pygame.display.flip()
-                        return self.handle_button_click(self.stop_button)
-                    elif self.exit_button.rect.collidepoint(pos):
-                        pygame.display.flip()
-                        return self.handle_button_click(self.exit_button)
-        pygame.display.flip()
-        return True
-
-    def update(self, time_delta):
-        self.ui_manager.update(time_delta)
-
-    def draw(self):
-        self.ui_manager.draw_ui(screen)
-        menu_actions_button_rect = self.menu_actions_button.relative_rect
-        screen.blit(self.button_image, menu_actions_button_rect.topleft)
 
 def init_game(new_game=False):
     global Board
     global render_count
-    interface = Interface(width, height)
-    running = True
     Board = Board(100, 100, 40)
+    running = True
     fps = TICKS
     if not new_game:
         Board.load()
@@ -894,9 +835,7 @@ def init_game(new_game=False):
     #     Figure(2, Board, 5, i, m)
 
     while running:
-        events =pygame.event.get()
-        time_delta = clock.tick(fps) / 1000.0
-        for event in events:
+        for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 Board.save()
                 running = False
@@ -904,7 +843,7 @@ def init_game(new_game=False):
                 Board.update("resize", event)
             if event.type == pygame.KEYDOWN:
                 Board.update("keydown", event)
-        running = interface.run(events, pygame.mouse.get_pos())
+
         if pygame.mouse.get_pressed():
             Board.update("MouseButton_pressed", pygame.mouse.get_pressed())
         render_count = (render_count + 1) % 1
@@ -917,8 +856,8 @@ def init_game(new_game=False):
             no_effectiveness_update = True
         Board.update()
         Belt.Update_animation()
-        interface.update(time_delta)
-        interface.draw()
+        BeltRight.Update_animation()
+        BeltLeft.Update_animation()
         # all_sprites.update()
         # all_sprites.draw(screen)
         clock.tick(fps)
@@ -926,6 +865,11 @@ def init_game(new_game=False):
         fps_text = font.render(f'FPS: {int(cur_fps)}', True, (255, 255, 255))
         screen.blit(fps_text, (10, 10))
         Factory.Update_animation()
+        Spliter.Update_animation()
+        BeltConnector.Update_animation()
+        Connector.Update_animation()
+        Rotator.Update_animation()
+        Deleter.Update_animation()
         Figure.Update()
         # pygame.draw.rect(screen, (128, 105, 102), (300, 300, 100, 100))
         # pygame.draw.rect(screen, (55, 54, 59), (300, 300, 100, 100), 2)
