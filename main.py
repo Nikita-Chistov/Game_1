@@ -744,24 +744,24 @@ class Interface:
         self.width = width
         self.height = height
         self.btn_width = int(width * 0.25)
-        btn_height = int(height * 0.115)
+        self.btn_height = int(height * 0.115)
         self.cell_size = cell_size
         self.ui_manager = pygame_gui.UIManager((width, height), "Data/theme.json")
 
         button_image = pygame.image.load("Data/Sprites/Button/menu_objects.png").convert_alpha()
-        self.button_image = pygame.transform.scale(button_image, (self.btn_width//8, btn_height//2))  # Подгоните размер изображения под кнопку
+        self.button_image = pygame.transform.scale(button_image, (self.btn_width//8, self.btn_height//2))  # Подгоните размер изображения под кнопку
 
         self.menu_actions_button = pygame_gui.elements.UIButton(
             relative_rect=pygame.Rect((int(width - self.btn_width//8), 0),
-                                      (int(self.btn_width//7), btn_height//2)),
+                                      (int(self.btn_width//7), self.btn_height//2)),
             text="",
             manager=self.ui_manager,
             object_id=pygame_gui.core.ObjectID(class_id="#main_button", object_id="#main_button")
         )
 
         self.menu_objects_button = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((width - int(self.btn_width // 1.5), height - btn_height),
-                                      (int(self.btn_width // 1.5), btn_height)),
+            relative_rect=pygame.Rect((width - int(self.btn_width // 1.5), height - self.btn_height),
+                                      (int(self.btn_width // 1.5), self.btn_height)),
             text="Постройки",
             manager=self.ui_manager,
             object_id=pygame_gui.core.ObjectID(class_id="#construction_button", object_id="#construction_button")
@@ -773,14 +773,14 @@ class Interface:
         self.menu_expanded = False
         self.stop_button = pygame_gui.elements.UIButton(
             relative_rect=pygame.Rect(self.menu_x , self.menu_y, self.menu_width,
-                                      btn_height // 2),
+                                      self.btn_height // 2),
             text="Стоп",
             manager=self.ui_manager,
             object_id=pygame_gui.core.ObjectID(class_id="#construction_button", object_id="#construction_button")
         )
         self.exit_button = pygame_gui.elements.UIButton(
             relative_rect=pygame.Rect(self.menu_x + int(self.btn_width * 0.215), self.menu_y, self.menu_width,
-                                      btn_height // 2),
+                                      self.btn_height // 2),
             text="Выход",
             manager=self.ui_manager,
             object_id=pygame_gui.core.ObjectID(class_id="#construction_button", object_id="#construction_button")
@@ -803,11 +803,47 @@ class Interface:
 
     def handle_button_click(self, button):
         if button == self.stop_button:
-            print("Игра стоп!")
+            return self.stop()
         elif button == self.exit_button:
             return False
         return True
 
+
+    def stop(self):
+        self.menu_actions_button.hide()
+        self.menu_objects_button.hide()
+        self.exit_button.hide()
+        self.stop_button.hide()
+        screen.fill((141, 148, 165))
+        btn_width = int(self.width * 0.25)
+        btn_height = int(self.height * 0.115)
+        btn_x_center = self.width // 2 - btn_width // 2
+        resume_button = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((int(btn_x_center), int(self.height * 0.3)), (btn_width, btn_height)),
+            text="Продолжить",
+            manager=self.ui_manager)
+        exit2_button = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((int(btn_x_center), int(self.height * 0.45)), (btn_width, btn_height)),
+            text="Завершить",
+            manager=self.ui_manager)
+        while True:
+            time_delta = clock.tick(60) / 1000.0
+            screen.fill((141, 148, 165))
+            for event in pygame.event.get():
+                self.ui_manager.process_events(event)
+                if event.type == pygame_gui.UI_BUTTON_PRESSED and event.ui_element == resume_button:
+                    resume_button.hide()
+                    exit2_button.hide()
+                    self.menu_actions_button.show()
+                    self.menu_objects_button.show()
+                    return True
+                if event.type == pygame_gui.UI_BUTTON_PRESSED and event.ui_element == exit2_button:
+                    resume_button.hide()
+                    exit2_button.hide()
+                    return False
+            self.ui_manager.update(time_delta)
+            self.ui_manager.draw_ui(screen)
+            pygame.display.flip()
 
     def run(self, events, pos):
         for event in events:
@@ -818,7 +854,7 @@ class Interface:
                 if self.menu_expanded:
                     if self.stop_button.rect.collidepoint(pos):
                         pygame.display.flip()
-                        self.handle_button_click(self.stop_button)
+                        return self.handle_button_click(self.stop_button)
                     elif self.exit_button.rect.collidepoint(pos):
                         pygame.display.flip()
                         return self.handle_button_click(self.exit_button)
