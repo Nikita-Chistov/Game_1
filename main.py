@@ -275,6 +275,7 @@ class Painting(Bildings):
     Input_Figures = np.array([["", ""], ["11 11",""]])
     Outputs = np.array([[1, 0], [0, 0]])
     Size_input_Figures = [2]
+    Sprite_group = pygame.sprite.Group()
 
     def __init__(self, board, x, y, orientation):
         super().__init__(board, x, y, orientation)
