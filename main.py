@@ -273,7 +273,7 @@ class Painting(Bildings):
     Inputs_orientation = np.array([[0, 0], [0,0]])
     Numbes_cells = np.array([[1,2],[3,4]])
     Input_Figures = np.array([["", ""], ["11 11",""]])
-    Outputs = np.array([[1, 0], [0, 0]])
+    Outputs = np.array([[0, 1], [0, 0]])
     Size_input_Figures = [2]
     Sprite_group = pygame.sprite.Group()
 
