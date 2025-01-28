@@ -6,13 +6,15 @@ import os
 import sys
 import random
 from PIL import Image
+import pygame_gui
 
 pygame.init()
 pygame.font.init()
 clock = pygame.time.Clock()
 pygame.display.set_caption('RTKY')
-size = width, height = 500, 500
-screen = pygame.display.set_mode(size, pygame.RESIZABLE)
+display_info = pygame.display.Info()
+size = width, height = (display_info.current_w, display_info.current_h)
+screen = pygame.display.set_mode(size, pygame.FULLSCREEN)
 font = pygame.font.SysFont(None, 30)
 no_effectiveness_update = True
 render_count = 0
@@ -22,8 +24,6 @@ phantom_bilds = pygame.sprite.Group()
 
 def get_resize_images(name, standart_size=(1, 1)):
     images = {}
-    if name == "Connector":
-        print()
     for size in range(MIN_CELL_SIZE - ZOOM_SPEED, MAX_CELL_SIZE + ZOOM_SPEED, ZOOM_SPEED):
         size_images = []
         for root, _, files in os.walk(os.path.join("Data", "Sprites", name)):
@@ -261,6 +261,43 @@ class Spliter(Bildings):
         Figure(2, self.board, output_x_1, output_y_1, figure_left)
         Figure(2, self.board, output_x_2, output_y_2, figure_right)
 
+class Painting(Bildings):
+    Size = (2, 2)
+    Sprite_images = get_resize_images("Painting", Size)
+    Patern_delays = [0, 250]
+    Patern_images = [0, 0]
+    capture = 0
+    current_sprite = 0
+    Speed = 1
+    Inputs = np.array([[0, 0], [1,0]])
+    Inputs_orientation = np.array([[0, 0], [0,0]])
+    Numbes_cells = np.array([[1,2],[3,4]])
+    Input_Figures = np.array([["", ""], ["11 11",""]])
+    Outputs = np.array([[1, 0], [0, 0]])
+    Size_input_Figures = [2]
+
+    def __init__(self, board, x, y, orientation):
+        super().__init__(board, x, y, orientation)
+        self.colour = ""
+
+
+    def check_can_create(self):
+        x, y = list(self.outputs.items())[0][0]
+        return super().check_can_create() and self.board.figures_on_board[y][x] is None
+
+
+    def create_product(self):
+        x_input = list(self.inputs.items())[0][0][0]
+        y_input = list(self.inputs.items())[0][0][1]
+        figure = self.board.figures_on_board[y_input][x_input].componets
+        new_color = (255, 0, 0)
+        for row in range(figure.shape[0]):
+            for col in range(figure.shape[1]):
+                figure[row, col][2:] = new_color
+        x_output = list(self.outputs.items())[0][0][0]
+        y_output = list(self.outputs.items())[0][0][1]
+        Figure(2, self.board, x_output, y_output, figure)
+        self.board.figures_on_board[y_input][x_input] = None
 
 class Deleter(Bildings):
     Size = (1, 1)
@@ -608,7 +645,7 @@ class Board:
             5: Spliter,
             6: Connector,
             7: Deleter,
-            8: Belt,
+            8: Painting,
             9: Belt,
         }
         if self.currect_bild == bildings_panel[key]:
@@ -702,12 +739,106 @@ class Board:
                         if self.board[i][j] is None:
                             reverse_code_bildings[code_board[i][j][0]](self, j, i, code_board[i][j][1])
 
+class Interface:
+    def __init__(self, width, height, cell_size=40):
+        self.width = width
+        self.height = height
+        self.btn_width = int(width * 0.25)
+        btn_height = int(height * 0.115)
+        self.cell_size = cell_size
+        self.ui_manager = pygame_gui.UIManager((width, height), "Data/theme.json")
+
+        button_image = pygame.image.load("Data/Sprites/Button/menu_objects.png").convert_alpha()
+        self.button_image = pygame.transform.scale(button_image, (self.btn_width//8, btn_height//2))  # Подгоните размер изображения под кнопку
+
+        self.menu_actions_button = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((int(width - self.btn_width//8), 0),
+                                      (int(self.btn_width//7), btn_height//2)),
+            text="",
+            manager=self.ui_manager,
+            object_id=pygame_gui.core.ObjectID(class_id="#main_button", object_id="#main_button")
+        )
+
+        self.menu_objects_button = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((width - int(self.btn_width // 1.5), height - btn_height),
+                                      (int(self.btn_width // 1.5), btn_height)),
+            text="Постройки",
+            manager=self.ui_manager,
+            object_id=pygame_gui.core.ObjectID(class_id="#construction_button", object_id="#construction_button")
+        )
+
+        self.menu_x = int(width - self.btn_width//8) - int(self.btn_width // 3.75) - int(self.btn_width * 0.15)
+        self.menu_y = 0
+        self.menu_width = int(self.btn_width // 5)
+        self.menu_expanded = False
+        self.stop_button = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect(self.menu_x , self.menu_y, self.menu_width,
+                                      btn_height // 2),
+            text="Стоп",
+            manager=self.ui_manager,
+            object_id=pygame_gui.core.ObjectID(class_id="#construction_button", object_id="#construction_button")
+        )
+        self.exit_button = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect(self.menu_x + int(self.btn_width * 0.215), self.menu_y, self.menu_width,
+                                      btn_height // 2),
+            text="Выход",
+            manager=self.ui_manager,
+            object_id=pygame_gui.core.ObjectID(class_id="#construction_button", object_id="#construction_button")
+        )
+
+        self.clock = pygame.time.Clock()
+        self.update_buttons_visibility()
+
+    def toggle_menu(self):
+        self.menu_expanded = not self.menu_expanded
+        self.update_buttons_visibility()
+
+    def update_buttons_visibility(self):
+        if self.menu_expanded:
+            self.exit_button.show()
+            self.stop_button.show()
+        else:
+            self.exit_button.hide()
+            self.stop_button.hide()
+
+    def handle_button_click(self, button):
+        if button == self.stop_button:
+            print("Игра стоп!")
+        elif button == self.exit_button:
+            return False
+        return True
+
+
+    def run(self, events, pos):
+        for event in events:
+            self.ui_manager.process_events(event)
+            if event.type == pygame_gui.UI_BUTTON_PRESSED and event.ui_element == self.menu_actions_button:
+                self.toggle_menu()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if self.menu_expanded:
+                    if self.stop_button.rect.collidepoint(pos):
+                        pygame.display.flip()
+                        self.handle_button_click(self.stop_button)
+                    elif self.exit_button.rect.collidepoint(pos):
+                        pygame.display.flip()
+                        return self.handle_button_click(self.exit_button)
+        pygame.display.flip()
+        return True
+
+    def update(self, time_delta):
+        self.ui_manager.update(time_delta)
+
+    def draw(self):
+        self.ui_manager.draw_ui(screen)
+        menu_actions_button_rect = self.menu_actions_button.relative_rect
+        screen.blit(self.button_image, menu_actions_button_rect.topleft)
 
 def init_game(new_game=False):
     global Board
     global render_count
-    Board = Board(100, 100, 40)
+    interface = Interface(width, height)
     running = True
+    Board = Board(100, 100, 40)
     fps = TICKS
     if not new_game:
         Board.load()
@@ -726,7 +857,9 @@ def init_game(new_game=False):
     #     Figure(2, Board, 5, i, m)
 
     while running:
-        for event in pygame.event.get():
+        events =pygame.event.get()
+        time_delta = clock.tick(fps) / 1000.0
+        for event in events:
             if event.type == pygame.QUIT:
                 Board.save()
                 running = False
@@ -734,7 +867,7 @@ def init_game(new_game=False):
                 Board.update("resize", event)
             if event.type == pygame.KEYDOWN:
                 Board.update("keydown", event)
-
+        running = interface.run(events, pygame.mouse.get_pos())
         if pygame.mouse.get_pressed():
             Board.update("MouseButton_pressed", pygame.mouse.get_pressed())
         render_count = (render_count + 1) % 1
@@ -747,6 +880,8 @@ def init_game(new_game=False):
             no_effectiveness_update = True
         Board.update()
         Belt.Update_animation()
+        interface.update(time_delta)
+        interface.draw()
         # all_sprites.update()
         # all_sprites.draw(screen)
         clock.tick(fps)
