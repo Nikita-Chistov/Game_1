@@ -261,7 +261,14 @@ class Hub(Bildings):
     Input_Figures = np.array([["", "11 11", ""], ["11 11", "", "11 11"], ["", "11 11", ""]])
     Inputs_orientation = np.array([[0, 2, 0], [1, 0, 3], [0, 0, 0]])
     Outputs = np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0]])
-    Size_input_Figures = [2]
+    Size_input_Figures = [2, 4]
+
+    def create_product(self):
+        for x, y in self.outputs.keys():
+            if self.board.figures_on_board[y][x] is not None:
+                figure = self.board.figures_on_board[y][x].componets
+                #data.get_figure(figure)
+                pass
 
 
 class Spliter(Bildings):
@@ -390,6 +397,31 @@ class Rotator(Bildings):
                 figure[i][j][1] = (figure[i][j][1] + 1) % 4
         Figure(2, self.board, x_input, y_input, figure)
 
+
+# class Asembler(Bildings):
+#     Size = (2, 2)
+#     Sprite_images = get_resize_images("Assembler", Size)
+#     Sprite_group = pygame.sprite.Group()
+#     Patern_delays = [0, 250]
+#     Patern_images = [0, 0]
+#     capture = 0
+#     current_sprite = 0
+#     Speed = 1
+#     Numbes_cells = np.array([[1, 2], [3, 4]])
+#     Inputs = np.array([[1, 1], [1, 1]])
+#     Inputs_orientation = np.array([[1, 3], [1, 3]])
+#     Input_Figures = np.array([["11 11", "11 11"], ["11 11", "11 11"]])
+#     Outputs = np.array([[1, 0], [0, 0]])
+#     Size_input_Figures = [2]
+
+    # def create_product(self):
+    #     figures = [self.board.figures_on_board[y][x].componets for x, y in self.inputs.items()]
+    #     up = np.concatenate((figures[0], figures[1]), axis=1)
+    #     down = np.concatenate((figures[2], figures[3]), axis=1)
+    #     new_figure = np.concatenate((up, down), axis=0)
+    #     x_output = list(self.outputs.items())[0][0][0]
+    #     y_output = list(self.outputs.items())[0][0][1]
+    #     Figure(4, self.board, x_output, y_output, new_figure)
 
 class Figure():
     сurrent_pos = 0
