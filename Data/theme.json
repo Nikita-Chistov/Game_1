@@ -1,0 +1,68 @@
+{
+    "button":
+    {
+        "colours":
+        {
+            "normal_bg": "#dde9e0",
+            "hovered_bg": "#b05650",
+            "disabled_bg": "#b05650",
+            "selected_bg": "#b05650",
+            "dark_bg": "hsl(30, 0.6, 0.7)",
+            "normal_text": "#0a463d",
+            "hovered_text": "#FFFFFF",
+            "selected_text": "purple",
+            "disabled_text": "RGB(40, 70, 90)",
+            "link_text": "HSV(50deg, 30%, 40%)",
+            "link_hover": "cmy(50%, 30%, 0.7)",
+            "link_selected": "teal",
+            "text_shadow": "skyblue",
+            "normal_border": "#0a463d"
+        },
+         "misc":
+         {
+             "shadow_width": "20",
+             "shape": "rounded_rectangle"
+         },
+        "font":
+         {
+             "name": "Ink Free",
+             "size": "40"
+         }
+    },
+    "#exit_button": {
+        "font":
+         {
+             "name": "Ink Free",
+             "size": "20"
+         }
+    },
+    "#main_button": {
+        "colours": {
+            "normal_bg": "rgba(0,0,0,0)",
+            "hovered_bg": "rgba(0,0,0,0)",
+            "disabled_bg": "rgba(0,0,0,0)",
+            "selected_bg": "rgba(0,0,0,0)",
+            "dark_bg": "rgba(0,0,0,0)"
+        },
+        "misc": {
+            "shadow_width": "0",
+            "shape": "rectangle"
+        },
+        "font": {
+            "name": "Comic Sans MS",
+            "size": "18",
+            "colour": "#FFFFFF"
+        }
+    },
+    "#construction_button": {
+        "font":
+         {
+             "name": "Comic Sans MS",
+             "size": "20"
+         },
+        "misc": {
+            "shadow_width": "0",
+            "shape": "rectangle"
+        }
+    }
+}
