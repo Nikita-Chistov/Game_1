@@ -669,7 +669,8 @@ code_bildings = {
     Spliter: SPLITTER_CODE,
     Deleter: DELETER_CODE,
     Connector: CONNECTOR_CODE,
-    Rotator: ROTATOR_CODE
+    Rotator: ROTATOR_CODE,
+    Painting: PAINTING_CODE
 
 }
 
