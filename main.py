@@ -1,4 +1,9 @@
 import math
+from operator import index
+
+from pygame import Clock
+from pygame.examples.scrap_clipboard import running
+from pymunk.examples.spiderweb import selected
 
 from settings import *
 import numpy as np
@@ -414,7 +419,14 @@ class Painting(Bildings):
 
     def __init__(self, board, x, y, orientation):
         super().__init__(board, x, y, orientation)
-        self.colour = ""
+        self.selected_color = self.color_selection()
+
+
+
+    def color_selection(self):
+        interface = Interface(width,height)
+        return interface.painting()
+
 
     def check_can_create(self):
         x, y = list(self.outputs.items())[0][0]
@@ -424,7 +436,8 @@ class Painting(Bildings):
         x_input = list(self.inputs.items())[0][0][0]
         y_input = list(self.inputs.items())[0][0][1]
         figure = self.board.figures_on_board[y_input][x_input].componets
-        new_color = (255, 0, 0)
+        color = pygame.Color(self.selected_color)
+        new_color = (color.r, color.g, color.b)
         for row in range(figure.shape[0]):
             for col in range(figure.shape[1]):
                 figure[row, col][2:] = new_color
@@ -893,8 +906,10 @@ class Interface:
         )
         self.buttons = []
 
+        self.paint = ["Data/Sprites/Button/image_2025-01-29_18-09-57.png","Data/Sprites/Button/image_2025-01-29_18-10-22.png", "Data/Sprites/Button/image_2025-01-29_18-10-45.png", "Data/Sprites/Button/image_2025-01-29_18-11-07.png", "Data/Sprites/Button/image_2025-01-29_18-11-32.png", "Data/Sprites/Button/image_2025-01-29_18-11-56.png", "Data/Sprites/Button/image_2025-01-29_18-12-21.png", "Data/Sprites/Button/image_2025-01-29_18-12-39.png", "Data/Sprites/Button/image_2025-01-29_18-13-14.png", "Data/Sprites/Button/image_2025-01-29_18-13-41.png", "Data/Sprites/Button/image_2025-01-29_18-14-41.png", "Data/Sprites/Button/image_2025-01-29_18-15-23.png", "Data/Sprites/Button/image_2025-01-29_18-15-45.png", "Data/Sprites/Button/image_2025-01-29_18-16-38.png"]
+        self.manager = pygame_gui.UIManager((width, height))
         for i in range(12):
-            btn_x = int(self.btn_width // 8 + i * (self.btn_width // 6 + 10))
+            btn_x = int(self.btn_width // 8 + i * (self.btn_width // 4))
             btn_y = int(self.btn_height * 0.25)
 
             button = pygame_gui.elements.UIButton(
@@ -905,7 +920,6 @@ class Interface:
                 object_id=pygame_gui.core.ObjectID(class_id="#construction_button",
                                                    object_id="#construction_button")
             )
-
             self.buttons.append(button)
 
         self.menu_x = int(width - self.btn_width // 8) - int(self.btn_width // 3.75) - int(self.btn_width * 0.15)
@@ -928,7 +942,75 @@ class Interface:
         )
         self.menu_actions_button.set_image(self.button_image)
         self.clock = pygame.time.Clock()
+
+        self.bottom_panel = pygame_gui.elements.UIPanel(
+            relative_rect=pygame.Rect((100, 100), (width, self.btn_height)),
+            manager=self.manager
+        )
+        self.buttons_s = []
+
+        for i in range(12):
+            btn_x = int(self.btn_width // 8 + i * (self.btn_width // 4))
+            btn_y = int(self.btn_height * 0.25)
+
+            self.button_image1 = pygame.image.load(self.paint[i])
+            self.button_image1 = pygame.transform.scale(self.button_image1, (
+                (int(self.btn_width // 6)), int(self.btn_height // 1.5)))
+            button = pygame_gui.elements.UIButton(
+                relative_rect=pygame.Rect((btn_x, btn_y), (int(self.btn_width // 6), int(self.btn_height // 1.5))),
+                manager=self.manager,
+                container=self.bottom_panel
+            )
+            button.set_image(self.button_image1)
+            self.buttons_s.append(button)
+
         self.update_buttons_visibility()
+
+    def painting(self):
+        colors = [
+            pygame.Color(255, 16, 25), pygame.Color(255, 165, 0), pygame.Color("#fff64a"), pygame.Color("#4a8002"),
+            pygame.Color("#356c9e"), pygame.Color(127, 0, 255), pygame.Color("#4ea0ea"), pygame.Color("#fd605f"),
+            pygame.Color("#bda5e2"), pygame.Color("#002d24"), pygame.Color("#fd605f"), pygame.Color("#4d000c"),
+            pygame.Color(255, 255, 255), pygame.Color(0, 0, 0)
+        ]
+        while True:
+            events = pygame.event.get()
+            time_delta = clock.tick(60) / 1000.0
+            for event in events:
+                self.manager.process_events(event)
+                for i, button in enumerate(self.buttons_s):
+                    self.button_image1 = pygame.image.load(self.paint[i])
+                    self.button_image1 = pygame.transform.scale(self.button_image1, (
+                                (int(self.btn_width // 6)), int(self.btn_height // 1.5)))
+                    self.buttons_s[i].set_image(self.button_image1)
+                if event.type == pygame.USEREVENT and event.user_type == pygame_gui.UI_BUTTON_PRESSED:
+                    if event.ui_element == self.buttons_s[0]:
+                        print("Нажата кнопка 1")
+                        return colors[0]
+                    elif event.ui_element == self.buttons_s[1]:
+                        print("Нажата кнопка 2")
+                        return colors[1]
+                    elif event.ui_element == self.buttons_s[2]:
+                        print("Нажата кнопка 3")
+                        return colors[2]
+                    elif event.ui_element == self.buttons_s[3]:
+                        print("Нажата кнопка 4")
+                        return colors[3]
+                    elif event.ui_element == self.buttons_s[4]:
+                        print("Нажата кнопка 5")
+                        return colors[4]
+                    elif event.ui_element == self.buttons_s[5]:
+                        print("Нажата кнопка 6")
+                        return colors[5]
+                    elif event.ui_element == self.buttons_s[6]:
+                        print("Нажата кнопка 7")
+                        return colors[6]
+                    elif event.ui_element == self.buttons_s[7]:
+                        print("Нажата кнопка 8")
+                        return colors[7]
+            self.manager.update(time_delta)
+            self.manager.draw_ui(screen)
+            pygame.display.flip()
 
     def toggle_menu(self):
         self.menu_expanded = not self.menu_expanded
@@ -990,12 +1072,28 @@ class Interface:
             if event.type == pygame_gui.UI_BUTTON_PRESSED and event.ui_element == self.menu_actions_button:
                 self.toggle_menu()
             if event.type == pygame.USEREVENT and event.user_type == pygame_gui.UI_BUTTON_PRESSED:
-                if event.ui_element == self.button1:
+                if event.ui_element == self.buttons[1]:
                     print("Нажата кнопка 1")
-                elif event.ui_element == self.button2:
+                elif event.ui_element == self.buttons[2]:
                     print("Нажата кнопка 2")
-                elif event.ui_element == self.button3:
+                elif event.ui_element == self.buttons[3]:
                     print("Нажата кнопка 3")
+                elif event.ui_element == self.buttons[4]:
+                    print("Нажата кнопка 4")
+                elif event.ui_element == self.buttons[5]:
+                    print("Нажата кнопка 5")
+                elif event.ui_element == self.buttons[6]:
+                    print("Нажата кнопка 6")
+                elif event.ui_element == self.buttons[7]:
+                    print("Нажата кнопка 7")
+                elif event.ui_element == self.buttons[8]:
+                    print("Нажата кнопка 8")
+                elif event.ui_element == self.buttons[9]:
+                    print("Нажата кнопка 9")
+                elif event.ui_element == self.buttons[10]:
+                    print("Нажата кнопка 10")
+                elif event.ui_element == self.buttons[11]:
+                    print("Нажата кнопка 11")
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if self.menu_expanded:
                     if self.stop_button.rect.collidepoint(pos):
