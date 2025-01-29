@@ -1,7 +1,5 @@
 import math
 
-from matplotlib.pyplot import figure
-
 from settings import *
 import numpy as np
 import pygame
@@ -858,6 +856,14 @@ class Board:
                         if self.board[i][j] is None:
                             reverse_code_bildings[code_board[i][j][0]](self, j, i, code_board[i][j][1])
 
+class Data:
+    def __init__(self, width, height, cell_size=40):
+        self.width = width
+        self.height = height
+        self.btn_width = int(width * 0.25)
+        self.btn_height = int(height * 0.115)
+        self.cell_size = cell_size
+
 
 class Interface:
     def __init__(self, width, height, cell_size=40):
@@ -887,6 +893,10 @@ class Interface:
             manager=self.ui_manager,
             object_id=pygame_gui.core.ObjectID(class_id="#construction_button", object_id="#construction_button")
         )
+        # self.bottom_panel = pygame_gui.elements.UIPanel(
+        #     relative_rect=pygame.Rect((0, height - self.btn_height), (width, self.btn_height)),
+        #     manager=self.ui_manager
+        # )
 
         self.menu_x = int(width - self.btn_width // 8) - int(self.btn_width // 3.75) - int(self.btn_width * 0.15)
         self.menu_y = 0
@@ -906,7 +916,7 @@ class Interface:
             manager=self.ui_manager,
             object_id=pygame_gui.core.ObjectID(class_id="#construction_button", object_id="#construction_button")
         )
-
+        self.menu_actions_button.set_image(self.button_image)
         self.clock = pygame.time.Clock()
         self.update_buttons_visibility()
 
@@ -967,6 +977,7 @@ class Interface:
 
     def run(self, events, pos):
         for event in events:
+            self.menu_actions_button.set_image(self.button_image)
             self.ui_manager.process_events(event)
             if event.type == pygame_gui.UI_BUTTON_PRESSED and event.ui_element == self.menu_actions_button:
                 self.toggle_menu()
@@ -986,9 +997,6 @@ class Interface:
 
     def draw(self):
         self.ui_manager.draw_ui(screen)
-        menu_actions_button_rect = self.menu_actions_button.relative_rect
-        screen.blit(self.button_image, menu_actions_button_rect.topleft)
-
 
 def init_game(new_game=False):
     global Board
