@@ -1059,6 +1059,7 @@ def init_game(new_game=False):
         # screen.blit(pygame.image.load("Data/Sprites/Factory/Factory_1.png"), (200, 200))
         # pygame.draw.circle(screen, pygame.Color("#bec1c6"), (250, 250), 25)
         pygame.display.update()
+    board.save()
 
 
 if __name__ == '__main__':
