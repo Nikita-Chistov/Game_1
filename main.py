@@ -891,10 +891,10 @@ class Interface:
              relative_rect=pygame.Rect((0, height - self.btn_height), (width, self.btn_height)),
              manager=self.ui_manager
         )
-        self.buttons = []  # Список для хранения кнопок
+        self.buttons = []
 
         for i in range(12):
-            btn_x = int(self.btn_width // 8 + i * (self.btn_width // 6 + 10))  # Располагаем кнопки в 4 столбца
+            btn_x = int(self.btn_width // 8 + i * (self.btn_width // 6 + 10))
             btn_y = int(self.btn_height * 0.25)
 
             button = pygame_gui.elements.UIButton(
