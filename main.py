@@ -27,7 +27,6 @@ phantom_bilds = pygame.sprite.Group()
 
 def get_resize_images(name, standart_size=(1, 1)):
     images = {}
-    print(list(os.walk(os.path.join("Data", "Sprites"))))
     for size in range(MIN_CELL_SIZE - ZOOM_SPEED, MAX_CELL_SIZE + ZOOM_SPEED, ZOOM_SPEED):
         size_images = []
         for root, _, files in os.walk(os.path.join("Data", "Sprites", name)):
@@ -88,8 +87,6 @@ class Bildings(pygame.sprite.Sprite):
 
     @classmethod
     def Update_animation(cls):
-        if str(cls) == str(Factory):
-            print(cls.capture)
         cls.capture = (cls.capture + cls.Speed) % (cls.Patern_delays[-1] + 1)
         if cls.capture in cls.Patern_delays:
             cls.current_sprite = cls.Patern_images[cls.Patern_delays.index(cls.capture)]
@@ -138,9 +135,7 @@ class Bildings(pygame.sprite.Sprite):
         self.outputs = dict(sorted(self.outputs.items(), key=lambda x: x[1]))
 
     def check_can_create(self):
-        return all([self.board.figures_on_board[y][x] is not None for x, y in self.inputs.keys()]) and all(
-            [self.board.figures_on_board[y][x].check_patern(self.inputs[(x, y)][1]) for x, y in
-             self.inputs.keys()]) and all([self.board.figures_on_board[y][x].in_bilding for x, y in self.inputs.keys()])
+        return all([self.board.figures_on_board[y][x] is not None for x, y in self.inputs.keys()]) and all([self.board.figures_on_board[y][x].in_bilding for x, y in self.inputs.keys()])
 
     def update_image(self):
         self.image = self.Sprite_images[self.board.cell_size][self.current_sprite][self.orientation]
@@ -364,7 +359,6 @@ class Connector(Bildings):
         y_input_1 = list(self.inputs.items())[0][0][1]
         x_input_2 = list(self.inputs.items())[1][0][0]
         y_input_2 = list(self.inputs.items())[1][0][1]
-        print(x_input_1, y_input_1, x_input_2, y_input_2)
         figure_left = self.board.figures_on_board[y_input_1][x_input_1].componets
         figure_right = self.board.figures_on_board[y_input_2][x_input_2].componets
         self.board.figures_on_board[y_input_1][x_input_1] = None
@@ -442,30 +436,36 @@ class Painting(Bildings):
         self.board.figures_on_board[y_input][x_input] = None
 
 
-# class Asembler(Bildings):
-#     Size = (2, 2)
-#     Sprite_images = get_resize_images("Assembler", Size)
-#     Sprite_group = pygame.sprite.Group()
-#     Patern_delays = [0, 250]
-#     Patern_images = [0, 0]
-#     capture = 0
-#     current_sprite = 0
-#     Speed = 1
-#     Numbes_cells = np.array([[1, 2], [3, 4]])
-#     Inputs = np.array([[1, 1], [1, 1]])
-#     Inputs_orientation = np.array([[1, 3], [1, 3]])
-#     Input_Figures = np.array([["11 11", "11 11"], ["11 11", "11 11"]])
-#     Outputs = np.array([[1, 0], [0, 0]])
-#     Size_input_Figures = [2]
+class Asembler(Bildings):
+    Size = (2, 2)
+    Sprite_images = get_resize_images("Asembler", Size)
+    Sprite_group = pygame.sprite.Group()
+    Patern_delays = [0, 250]
+    Patern_images = [0, 0]
+    capture = 0
+    current_sprite = 0
+    Speed = 1
+    Numbes_cells = np.array([[1, 2], [3, 4]])
+    Inputs = np.array([[1, 1], [1, 1]])
+    Inputs_orientation = np.array([[1, 3], [1, 3]])
+    Input_Figures = np.array([["11 11", "11 11"], ["11 11", "11 11"]])
+    Outputs = np.array([[1, 0], [0, 0]])
+    Size_input_Figures = [2]
 
-# def create_product(self):
-#     figures = [self.board.figures_on_board[y][x].componets for x, y in self.inputs.items()]
-#     up = np.concatenate((figures[0], figures[1]), axis=1)
-#     down = np.concatenate((figures[2], figures[3]), axis=1)
-#     new_figure = np.concatenate((up, down), axis=0)
-#     x_output = list(self.outputs.items())[0][0][0]
-#     y_output = list(self.outputs.items())[0][0][1]
-#     Figure(4, self.board, x_output, y_output, new_figure)
+    def create_product(self):
+        input_cord = [(y, x) for x, y in self.inputs.keys()]
+        figure1 = self.board.figures_on_board[input_cord[0][0]][input_cord[0][1]].componets
+        figure2 = self.board.figures_on_board[input_cord[1][0]][input_cord[1][1]].componets
+        figure3 = self.board.figures_on_board[input_cord[2][0]][input_cord[2][1]].componets
+        figure4 = self.board.figures_on_board[input_cord[3][0]][input_cord[3][1]].componets
+        for y, x in input_cord:
+            self.board.figures_on_board[y][x] = None
+        up = np.concatenate((figure1, figure2), axis=1)
+        down = np.concatenate((figure3, figure4), axis=1)
+        new_figure = np.concatenate((up, down), axis=0)
+        x_output = list(self.outputs.items())[0][0][0]
+        y_output = list(self.outputs.items())[0][0][1]
+        Figure(4, self.board, x_output, y_output, new_figure)
 
 class Figure():
     сurrent_pos = 0
@@ -526,6 +526,8 @@ class Figure():
             self.orientation = self.board.board[self.y][self.x].orientation
 
     def check_patern(self, patern):
+        if len(patern.split(" ")) != self.size:
+            return False
         for i in range(self.size):
             for j in range(self.size):
                 if patern.split(" ")[i][j] == "0" and self.patern.split(" ")[i][j] == "1":
@@ -568,9 +570,9 @@ class Figure():
                 elif self.board.board[next_y][next_x].__class__.__bases__[0] is Bildings:
                     if self.board.figures_on_board[next_y][next_x] is None:
                         if (next_x, next_y) in self.board.board[next_y][next_x].inputs.keys():
+                            print(self.size in self.board.board[next_y][next_x].__class__.Size_input_Figures, str(self.board.board[next_y][next_x].__class__))
                             if self.check_patern(
-                                    self.board.board[next_y][next_x].inputs[(next_x, next_y)][1]) and self.size in \
-                                    self.board.board[next_y][next_x].__class__.Size_input_Figures:
+                                    self.board.board[next_y][next_x].inputs[(next_x, next_y)][1]) or str(self.board.board[next_y][next_x].__class__) in ("__main__.Deleter", "__main__.Hub"):
                                 if self.orientation == self.board.board[next_y][next_x].inputs[(next_x, next_y)][2]:
                                     f = True
                                     self.in_bilding = True
@@ -752,7 +754,7 @@ class Board:
 
     def change_current_bild(self, key):
         bildings_panel = {
-            0: Belt,
+            0: Asembler,
             1: Belt,
             2: BeltLeft,
             3: BeltRight,
@@ -760,7 +762,7 @@ class Board:
             5: Spliter,
             6: Connector,
             7: Deleter,
-            8: Rotator,
+            8: Hub,
             9: Painting,
         }
         if self.currect_bild == bildings_panel[key]:
@@ -836,6 +838,7 @@ class Board:
                 -2 * self.cell_size < self.y + y * self.cell_size < screen.get_height() + 2 * self.cell_size)
 
     def save(self):
+        print(324)
         with open("save_board.txt", "w") as f:
             code_board = [([None] * self.width) for _ in range(self.height)]
             for i in range(self.height):
@@ -1047,6 +1050,7 @@ def init_game(new_game=False):
         Rotator.Update_animation()
         Deleter.Update_animation()
         Painting.Update_animation()
+        Asembler.Update_animation()
         Figure.Update()
         interface.update(time_delta)
         interface.draw()
