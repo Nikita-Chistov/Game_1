@@ -886,17 +886,27 @@ class Interface:
             object_id=pygame_gui.core.ObjectID(class_id="#main_button", object_id="#main_button")
         )
 
-        self.menu_objects_button = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((width - int(self.btn_width // 1.5), height - self.btn_height),
-                                      (int(self.btn_width // 1.5), self.btn_height)),
-            text="Постройки",
-            manager=self.ui_manager,
-            object_id=pygame_gui.core.ObjectID(class_id="#construction_button", object_id="#construction_button")
+
+        self.bottom_panel = pygame_gui.elements.UIPanel(
+             relative_rect=pygame.Rect((0, height - self.btn_height), (width, self.btn_height)),
+             manager=self.ui_manager
         )
-        # self.bottom_panel = pygame_gui.elements.UIPanel(
-        #     relative_rect=pygame.Rect((0, height - self.btn_height), (width, self.btn_height)),
-        #     manager=self.ui_manager
-        # )
+        self.buttons = []  # Список для хранения кнопок
+
+        for i in range(12):
+            btn_x = int(self.btn_width // 8 + i * (self.btn_width // 6 + 10))  # Располагаем кнопки в 4 столбца
+            btn_y = int(self.btn_height * 0.25)
+
+            button = pygame_gui.elements.UIButton(
+                relative_rect=pygame.Rect((btn_x, btn_y), (int(self.btn_width // 6), int(self.btn_height // 1.5))),
+                text=f"Кнопка {i + 1}",
+                manager=self.ui_manager,
+                container=self.bottom_panel,
+                object_id=pygame_gui.core.ObjectID(class_id="#construction_button",
+                                                   object_id="#construction_button")
+            )
+
+            self.buttons.append(button)
 
         self.menu_x = int(width - self.btn_width // 8) - int(self.btn_width // 3.75) - int(self.btn_width * 0.15)
         self.menu_y = 0
@@ -941,7 +951,6 @@ class Interface:
 
     def stop(self):
         self.menu_actions_button.hide()
-        self.menu_objects_button.hide()
         self.exit_button.hide()
         self.stop_button.hide()
         screen.fill((141, 148, 165))
@@ -965,7 +974,6 @@ class Interface:
                     resume_button.hide()
                     exit2_button.hide()
                     self.menu_actions_button.show()
-                    self.menu_objects_button.show()
                     return True
                 if event.type == pygame_gui.UI_BUTTON_PRESSED and event.ui_element == exit2_button:
                     resume_button.hide()
@@ -981,6 +989,13 @@ class Interface:
             self.ui_manager.process_events(event)
             if event.type == pygame_gui.UI_BUTTON_PRESSED and event.ui_element == self.menu_actions_button:
                 self.toggle_menu()
+            if event.type == pygame.USEREVENT and event.user_type == pygame_gui.UI_BUTTON_PRESSED:
+                if event.ui_element == self.button1:
+                    print("Нажата кнопка 1")
+                elif event.ui_element == self.button2:
+                    print("Нажата кнопка 2")
+                elif event.ui_element == self.button3:
+                    print("Нажата кнопка 3")
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if self.menu_expanded:
                     if self.stop_button.rect.collidepoint(pos):
