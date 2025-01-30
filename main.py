@@ -2,8 +2,6 @@ import math
 from operator import index
 
 from pygame import Clock
-from pygame.examples.scrap_clipboard import running
-from pymunk.examples.spiderweb import selected
 
 from settings import *
 import numpy as np
@@ -432,12 +430,26 @@ class Painting(Bildings):
         x, y = list(self.outputs.items())[0][0]
         return super().check_can_create() and self.board.figures_on_board[y][x] is None
 
+    def get_colored_background(self):
+        background = pygame.Surface(self.Sprite_images[0].get_size())
+        background.fill(self.selected_color)
+        return background
+
+    def draw(self, screen):
+        background = self.get_colored_background()
+        sprite = self.Sprite_images[self.current_sprite]
+        background.blit(sprite, (0, 0))
+        screen.blit(background, (self.x * 200, self.y * 200))
+
     def create_product(self):
+
         x_input = list(self.inputs.items())[0][0][0]
         y_input = list(self.inputs.items())[0][0][1]
         figure = self.board.figures_on_board[y_input][x_input].componets
         color = pygame.Color(self.selected_color)
         new_color = (color.r, color.g, color.b)
+        #self.get_colored_background()
+        #self.draw(screen)
         for row in range(figure.shape[0]):
             for col in range(figure.shape[1]):
                 figure[row, col][2:] = new_color
@@ -887,8 +899,8 @@ class Interface:
         self.cell_size = cell_size
         self.ui_manager = pygame_gui.UIManager((width, height), "Data/theme.json")
 
-        button_image = pygame.image.load("Data/Sprites/Button/menu_objects.png").convert_alpha()
-        self.button_image = pygame.transform.scale(button_image, (
+        button_image_g = pygame.image.load("Data/Sprites/Button/menu_objects.png").convert_alpha()
+        self.button_image_g = pygame.transform.scale(button_image_g, (
         self.btn_width // 8, self.btn_height // 2))  # Подгоните размер изображения под кнопку
 
         self.menu_actions_button = pygame_gui.elements.UIButton(
@@ -905,21 +917,27 @@ class Interface:
              manager=self.ui_manager
         )
         self.buttons = []
-
+        self.bildings = ["Data/Sprites/Asembler/Asembler_1.png", "Data/Sprites/Belt/Belt_1.png",
+                         "Data/Sprites/BeltLeft/BeltLeft_1.png", "Data/Sprites/BeltRight/BeltRight_1.png",
+                         "Data/Sprites/Factory/Factory_1.png", "Data/Sprites/Deleter/Deleter_1.png",
+                         "Data/Sprites/BeltConnector/BeltConnector_1.png", "Data/Sprites/Painting/Painting_1.png",
+                         "Data/Sprites/Rotator/Rotator_1.png",  "Data/Sprites/Spliter/Spliter_1.png","Data/Sprites/Сonneсtor/Сonneсtor_1.png"]
         self.paint = ["Data/Sprites/Button/image_2025-01-29_18-09-57.png","Data/Sprites/Button/image_2025-01-29_18-10-22.png", "Data/Sprites/Button/image_2025-01-29_18-10-45.png", "Data/Sprites/Button/image_2025-01-29_18-11-07.png", "Data/Sprites/Button/image_2025-01-29_18-11-32.png", "Data/Sprites/Button/image_2025-01-29_18-11-56.png", "Data/Sprites/Button/image_2025-01-29_18-12-21.png", "Data/Sprites/Button/image_2025-01-29_18-12-39.png", "Data/Sprites/Button/image_2025-01-29_18-13-14.png", "Data/Sprites/Button/image_2025-01-29_18-13-41.png", "Data/Sprites/Button/image_2025-01-29_18-14-41.png", "Data/Sprites/Button/image_2025-01-29_18-15-23.png", "Data/Sprites/Button/image_2025-01-29_18-15-45.png", "Data/Sprites/Button/image_2025-01-29_18-16-38.png"]
         self.manager = pygame_gui.UIManager((width, height))
-        for i in range(12):
+        for i in range(11):
             btn_x = int(self.btn_width // 8 + i * (self.btn_width // 4))
             btn_y = int(self.btn_height * 0.25)
 
+            self.button_image = pygame.image.load(self.bildings[i])
+            self.button_image = pygame.transform.scale(self.button_image, (
+                (int(self.btn_width // 6)), int(self.btn_height // 1.5)))
             button = pygame_gui.elements.UIButton(
+                text="",
                 relative_rect=pygame.Rect((btn_x, btn_y), (int(self.btn_width // 6), int(self.btn_height // 1.5))),
-                text=f"Кнопка {i + 1}",
                 manager=self.ui_manager,
-                container=self.bottom_panel,
-                object_id=pygame_gui.core.ObjectID(class_id="#construction_button",
-                                                   object_id="#construction_button")
+                container=self.bottom_panel
             )
+            button.set_image(self.button_image)
             self.buttons.append(button)
 
         self.menu_x = int(width - self.btn_width // 8) - int(self.btn_width // 3.75) - int(self.btn_width * 0.15)
@@ -940,15 +958,13 @@ class Interface:
             manager=self.ui_manager,
             object_id=pygame_gui.core.ObjectID(class_id="#construction_button", object_id="#construction_button")
         )
-        self.menu_actions_button.set_image(self.button_image)
+        self.menu_actions_button.set_image(self.button_image_g)
         self.clock = pygame.time.Clock()
-
-        self.bottom_panel = pygame_gui.elements.UIPanel(
+        self.panel = pygame_gui.elements.UIPanel(
             relative_rect=pygame.Rect((100, 100), (width, self.btn_height)),
             manager=self.manager
         )
         self.buttons_s = []
-
         for i in range(12):
             btn_x = int(self.btn_width // 8 + i * (self.btn_width // 4))
             btn_y = int(self.btn_height * 0.25)
@@ -956,13 +972,14 @@ class Interface:
             self.button_image1 = pygame.image.load(self.paint[i])
             self.button_image1 = pygame.transform.scale(self.button_image1, (
                 (int(self.btn_width // 6)), int(self.btn_height // 1.5)))
-            button = pygame_gui.elements.UIButton(
+            button1 = pygame_gui.elements.UIButton(
+                text="",
                 relative_rect=pygame.Rect((btn_x, btn_y), (int(self.btn_width // 6), int(self.btn_height // 1.5))),
                 manager=self.manager,
-                container=self.bottom_panel
+                container=self.panel
             )
-            button.set_image(self.button_image1)
-            self.buttons_s.append(button)
+            button1.set_image(self.button_image1)
+            self.buttons_s.append(button1)
 
         self.update_buttons_visibility()
 
@@ -1008,6 +1025,18 @@ class Interface:
                     elif event.ui_element == self.buttons_s[7]:
                         print("Нажата кнопка 8")
                         return colors[7]
+                    elif event.ui_element == self.buttons_s[8]:
+                        print("Нажата кнопка 9")
+                        return colors[8]
+                    elif event.ui_element == self.buttons_s[9]:
+                        print("Нажата кнопка 10")
+                        return colors[9]
+                    elif event.ui_element == self.buttons_s[10]:
+                        print("Нажата кнопка 11")
+                        return colors[10]
+                    elif event.ui_element == self.buttons_s[11]:
+                        print("Нажата кнопка 12")
+                        return colors[11]
             self.manager.update(time_delta)
             self.manager.draw_ui(screen)
             pygame.display.flip()
