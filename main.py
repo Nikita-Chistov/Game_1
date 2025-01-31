@@ -76,10 +76,22 @@ class Data:
                 [(2, 0, 195, 205, 236), (1, 1, 195, 205, 236)],
                 [(2, 3, 195, 205, 236), (1, 2, 195, 205, 236)]]),
             np.array([
+                [(0, 0, 195, 205, 236), (1, 1, 195, 205, 236)],
+                [(0, 0, 195, 205, 236), (1, 2, 195, 205, 236)]]),
+            np.array([
                 [(1, 0, 195, 205, 236), (1, 1, 195, 205, 236)],
-                [(1, 3, 195, 205, 236), (1, 2, 195, 205, 236)]]),
+                [(1, 3, 195, 205, 236), (2, 2, 195, 205, 236)]]),
+            np.array([
+                [(1, 3, 195, 205, 236), (1, 0, 195, 205, 236)],
+                [(1, 2, 195, 205, 236), (1, 1, 195, 205, 236)]]),
+            np.array([
+                [(1, 0, 195, 205, 236), (1, 1, 195, 205, 236), (1, 0, 195, 205, 236), (1, 1, 195, 205, 236)],
+                [(1, 3, 195, 205, 236), (2, 2, 195, 205, 236), (2, 3, 195, 205, 236), (1, 2, 195, 205, 236)],
+                [(1, 0, 195, 205, 236), (2, 1, 195, 205, 236), (2, 0, 195, 205, 236), (1, 1, 195, 205, 236)],
+                [(1, 3, 195, 205, 236), (1, 2, 195, 205, 236), (1, 3, 195, 205, 236), (1, 2, 195, 205, 236)]
+            ]),
         ]
-        self.count_all_levels = [10, 20]
+        self.count_all_levels = [10, 20, 50, 100, 100]
         self.level = 0
         self.bildings_levels = {}
         self.figures_in_hub = {}
@@ -414,8 +426,8 @@ class Spliter(Bildings):
         figure = self.board.figures_on_board[y_input][x_input].componets
         self.board.figures_on_board[y_input][x_input] = None
         zero_figure = np.array([
-            [(0, 0, 195, 205, 236), (0, 1, 195, 205, 236)],
-            [(0, 3, 195, 205, 236), (0, 2, 195, 205, 236)]
+            [(0, 0, 195, 205, 236), (0, 0, 195, 205, 236)],
+            [(0, 0, 195, 205, 236), (0, 0, 195, 205, 236)]
         ])
         zero_figure_left, zero_figure_right = np.hsplit(zero_figure, 2)
         figure_left, figure_right = np.hsplit(figure, 2)
@@ -806,6 +818,7 @@ class Board:
         self.y = 0
         self.currect_bild = None
         self.currect_orientation = 0
+        self.help = True
 
     def render(self, screen):
         viev_sprites = pygame.sprite.Group()
@@ -851,6 +864,10 @@ class Board:
                 phantom_image.set_alpha(96)
             screen.blit(phantom_image, (self.get_cell(pygame.mouse.get_pos())[0] * self.cell_size + self.x,
                                         self.get_cell(pygame.mouse.get_pos())[1] * self.cell_size + self.y))
+        if self.help:
+            font = pygame.font.SysFont(None, 25)
+            text = font.render(f"ЛКМ - Строить\nПКМ - Удалять\nКолесо мыши - Масштаб\nКлавиатура:\n1 - Belt\n2 - BeltLeft\n3 - BeltRight\n4 - Factory\n5 - Spliter\n6 - Connector\n7 - Deleter\n8 - Rotator\n9 - Painter\n0 - Asembler\nW, A, S, D - перемещение\nR - поворот\nQ - копировать постройку\nC - Показать/Скрыть подсказки", True, (0, 0, 0))
+            screen.blit(text, (10, 100))
 
     def get_cell(self, mouse_pos):
         cell_x = (mouse_pos[0] - self.x) // self.cell_size
@@ -939,6 +956,9 @@ class Board:
                 elif key in bilds_keys:
                     self.change_current_bild(bilds_keys.index(key))
 
+                elif key == pygame.K_c:
+                    self.help = not self.help
+
         if pygame.key.get_pressed()[pygame.K_w]:
             self.y += MOVE_SPEED
         if pygame.key.get_pressed()[pygame.K_s]:
@@ -997,13 +1017,13 @@ class Interface:
             object_id=pygame_gui.core.ObjectID(class_id="#main_button", object_id="#main_button")
         )
 
-        self.menu_objects_button = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((width - int(self.btn_width // 1.5), height - self.btn_height),
-                                      (int(self.btn_width // 1.5), self.btn_height)),
-            text="Постройки",
-            manager=self.ui_manager,
-            object_id=pygame_gui.core.ObjectID(class_id="#construction_button", object_id="#construction_button")
-        )
+        # self.menu_objects_button = pygame_gui.elements.UIButton(
+        #     relative_rect=pygame.Rect((width - int(self.btn_width // 1.5), height - self.btn_height),
+        #                               (int(self.btn_width // 1.5), self.btn_height)),
+        #     text="Постройки",
+        #     manager=self.ui_manager,
+        #     object_id=pygame_gui.core.ObjectID(class_id="#construction_button", object_id="#construction_button")
+        # )
 
         self.menu_x = int(width - self.btn_width // 8) - int(self.btn_width // 3.75) - int(self.btn_width * 0.15)
         self.menu_y = 0
