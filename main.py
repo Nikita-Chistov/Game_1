@@ -248,6 +248,25 @@ class Factory(Bildings):
         ]))
 
 
+class Data:
+    def __init__(self):
+        self.level = 1
+        self.figures_in_hub = 0
+        self.font = pygame.font.SysFont(None, 40)
+
+    def update(self, count):
+        self.figures_in_hub += count
+
+    def draw(self, screen):
+        pygame.draw.rect(screen, (50, 50, 50), (10, 10, 200, 80))
+        pygame.draw.rect(screen, (200, 200, 200), (10, 10, 200, 80), 2)
+
+        level_text = self.font.render(f"Уровень: {self.level}", True, (255, 255, 255))
+        screen.blit(level_text, (20, 20))
+
+        figures_text = self.font.render(f"Фигур в хабе: {self.figures_in_hub}", True, (255, 255, 255))
+        screen.blit(figures_text, (20, 50))
+
 class Hub(Bildings):
     Size = (3, 3)
     Sprite_images = get_resize_images("Hub", Size)
@@ -270,10 +289,12 @@ class Hub(Bildings):
              self.inputs.keys()])
 
     def create_product(self):
+        global data
         for x, y in self.inputs.keys():
             if self.board.figures_on_board[y][x] is not None:
                 figure = self.board.figures_on_board[y][x].componets
                 # data.get_figure(figure)
+                data.update(1)
                 self.board.figures_on_board[y][x].kill()
 
 
@@ -995,11 +1016,13 @@ class Interface:
 
 def init_game(new_game=False):
     global Board
+    global data
     global render_count
     board = Board(100, 100, 40)
     interface = Interface(width, height)
     running = True
     fps = TICKS
+    data = Data()
     if not new_game:
         board.load()
     # for i in range(5, 10):
@@ -1059,6 +1082,7 @@ def init_game(new_game=False):
         Figure.Update()
         interface.update(time_delta)
         interface.draw()
+        data.draw(screen)
         # pygame.draw.rect(screen, (128, 105, 102), (300, 300, 100, 100))
         # pygame.draw.rect(screen, (128, 105, 102), (300, 300, 100, 100))
         # pygame.draw.rect(screen, (55, 54, 59), (300, 300, 100, 100), 2)
