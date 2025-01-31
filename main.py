@@ -69,6 +69,104 @@ def load_image(path, colorkey=None):
     return image
 
 
+class Data:
+    def __init__(self):
+        self.figures_all_levels = [
+            np.array([
+                [(2, 0, 195, 205, 236), (1, 1, 195, 205, 236)],
+                [(2, 3, 195, 205, 236), (1, 2, 195, 205, 236)]]),
+            np.array([
+                [(1, 0, 195, 205, 236), (1, 1, 195, 205, 236)],
+                [(1, 3, 195, 205, 236), (1, 2, 195, 205, 236)]]),
+        ]
+        self.count_all_levels = [10, 20]
+        self.level = 0
+        self.bildings_levels = {}
+        self.figures_in_hub = {}
+        self.font = pygame.font.SysFont(None, 25)
+
+    def get_figure(self, figure):
+        self.figures_in_hub[str(figure)] = self.figures_in_hub.get(str(figure), 0) + 1
+        if self.figures_in_hub.get(str(self.figures_all_levels[self.level]), 0) >= self.count_all_levels[self.level]:
+            self.level += 1
+
+    def render_part_circle(self, x, y, size, orientation, color):
+        radius = size
+        surf = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)
+        surf.fill((0, 0, 0, 0))
+        pygame.draw.circle(surf, (0, 0, 0), (radius, radius), radius)
+        if size < 10:
+            pygame.draw.circle(surf, color, (radius, radius), radius - 1)
+            pygame.draw.line(surf, (0, 0, 0), (radius, 0), (radius, radius * 2), 1)
+            pygame.draw.line(surf, (0, 0, 0), (0, radius), (radius * 2, radius), 1)
+        else:
+            pygame.draw.circle(surf, color, (radius, radius), radius - 2)
+            pygame.draw.line(surf, (0, 0, 0), (radius - 1, 0), (radius - 1, radius * 2), 2)
+            pygame.draw.line(surf, (0, 0, 0), (0, radius - 1), (radius * 2, radius - 1), 2)
+        if orientation == 0:
+            mask_rect = pygame.Rect(0, 0, radius, radius)
+        elif orientation == 1:
+            mask_rect = pygame.Rect(radius, 0, radius, radius)
+        elif orientation == 2:
+            mask_rect = pygame.Rect(radius, radius, radius, radius)
+        elif orientation == 3:
+            mask_rect = pygame.Rect(0, radius, radius, radius)
+        surf = surf.subsurface(mask_rect)
+        screen.blit(surf, (x, y))
+
+    def render_part_square(self, x, y, size, orientation, color):
+        surf = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)
+        surf.fill((0, 0, 0, 0))
+        pygame.draw.rect(surf, (0, 0, 0), (0, 0, size * 2, size * 2))
+        if size < 10:
+            pygame.draw.rect(surf, color, (1, 1, size * 2 - 2, size * 2 - 2))
+            pygame.draw.line(surf, (0, 0, 0), (size, 0), (size, size * 2), 1)
+            pygame.draw.line(surf, (0, 0, 0), (0, size), (size * 2, size), 1)
+        else:
+            pygame.draw.rect(surf, color, (2, 2, size * 2 - 4, size * 2 - 4))
+            pygame.draw.line(surf, (0, 0, 0), (size - 1, 0), (size - 1, size * 2), 2)
+            pygame.draw.line(surf, (0, 0, 0), (0, size - 1), (size * 2, size - 1), 2)
+        if orientation == 0:
+            mask_rect = pygame.Rect(0, 0, size, size)
+        elif orientation == 1:
+            mask_rect = pygame.Rect(size, 0, size, size)
+        elif orientation == 2:
+            mask_rect = pygame.Rect(size, size, size, size)
+        elif orientation == 3:
+            mask_rect = pygame.Rect(0, size, size, size)
+        surf = surf.subsurface(mask_rect)
+        screen.blit(surf, (x, y))
+
+    def draw(self, screen):
+        pygame.draw.rect(screen, (50, 50, 50), (10, 10, 250, 80))
+        pygame.draw.rect(screen, (200, 200, 200), (10, 10, 250, 80), 2)
+
+        level_text = self.font.render(f"Уровень: {self.level + 1}", True, (255, 255, 255))
+        screen.blit(level_text, (20, 20))
+
+        figures_text = self.font.render(
+            f"{self.figures_in_hub.get(str(self.figures_all_levels[self.level]), 0)}/{self.count_all_levels[self.level]}",
+            True,
+            (255, 255, 255))
+        screen.blit(figures_text, (20, 50))
+
+        figure = self.figures_all_levels[self.level]
+        centre = (200, 50)
+        # pygame.draw.rect(screen, (122, 0, 122), (self.x * self.board.cell_size + self.board.x, self.y * self.board.cell_size + self.board.y,self.board.cell_size, self.board.cell_size))
+        part_size = 100 // 2 // figure.shape[0]
+        x_n = part_size * figure.shape[0] // 2
+        y_n = part_size * figure.shape[0] // 2
+        for i in range(figure.shape[0]):
+            for j in range(figure.shape[0]):
+                if figure[j, i] is not None:
+                    if figure[j, i][0] == 1:
+                        self.render_part_circle(centre[0] - x_n + part_size * i, centre[1] - y_n + part_size * j,
+                                                part_size, figure[j, i][1], figure[j, i][2:5])
+                    if figure[j, i][0] == 2:
+                        self.render_part_square(centre[0] - x_n + part_size * i, centre[1] - y_n + part_size * j,
+                                                part_size, figure[j, i][1], figure[j, i][2:5])
+
+
 class Bildings(pygame.sprite.Sprite):
     Sprite_images = get_resize_images("conv")
     Size = (1, 1)
@@ -135,7 +233,8 @@ class Bildings(pygame.sprite.Sprite):
         self.outputs = dict(sorted(self.outputs.items(), key=lambda x: x[1]))
 
     def check_can_create(self):
-        return all([self.board.figures_on_board[y][x] is not None for x, y in self.inputs.keys()]) and all([self.board.figures_on_board[y][x].in_bilding for x, y in self.inputs.keys()])
+        return all([self.board.figures_on_board[y][x] is not None for x, y in self.inputs.keys()]) and all(
+            [self.board.figures_on_board[y][x].in_bilding for x, y in self.inputs.keys()])
 
     def update_image(self):
         self.image = self.Sprite_images[self.board.cell_size][self.current_sprite][self.orientation]
@@ -243,29 +342,10 @@ class Factory(Bildings):
 
     def create_product(self):
         self.board.figures_on_board[self.y][self.x] = Figure(2, self.board, self.x, self.y, np.array([
-            [(1, 0, 195, 205, 236), (1, 1, 195, 205, 236)],
+            [(2, 0, 195, 205, 236), (1, 1, 195, 205, 236)],
             [(2, 3, 195, 205, 236), (1, 2, 195, 205, 236)]
         ]))
 
-
-class Data:
-    def __init__(self):
-        self.level = 1
-        self.figures_in_hub = 0
-        self.font = pygame.font.SysFont(None, 40)
-
-    def update(self, count):
-        self.figures_in_hub += count
-
-    def draw(self, screen):
-        pygame.draw.rect(screen, (50, 50, 50), (10, 10, 200, 80))
-        pygame.draw.rect(screen, (200, 200, 200), (10, 10, 200, 80), 2)
-
-        level_text = self.font.render(f"Уровень: {self.level}", True, (255, 255, 255))
-        screen.blit(level_text, (20, 20))
-
-        figures_text = self.font.render(f"Фигур в хабе: {self.figures_in_hub}", True, (255, 255, 255))
-        screen.blit(figures_text, (20, 50))
 
 class Hub(Bildings):
     Size = (3, 3)
@@ -293,8 +373,7 @@ class Hub(Bildings):
         for x, y in self.inputs.keys():
             if self.board.figures_on_board[y][x] is not None:
                 figure = self.board.figures_on_board[y][x].componets
-                # data.get_figure(figure)
-                data.update(1)
+                data.get_figure(figure)
                 self.board.figures_on_board[y][x].kill()
 
 
@@ -493,7 +572,8 @@ class Asembler(Bildings):
         y_output = list(self.outputs.items())[0][0][1]
         Figure(4, self.board, x_output, y_output, new_figure)
 
-class Figure():
+
+class Figure:
     сurrent_pos = 0
     all_figures = []
 
@@ -532,6 +612,8 @@ class Figure():
                     patern.append("0")
             patern.append(" ")
         self.patern = "".join(patern[:-1])
+        if all([s in ('0', ' ') for s in self.patern]):
+            self.kill()
 
     def kill(self):
         self.board.figures_on_board[self.y][self.x] = None
@@ -597,7 +679,9 @@ class Figure():
                     if self.board.figures_on_board[next_y][next_x] is None:
                         if (next_x, next_y) in self.board.board[next_y][next_x].inputs.keys():
                             if self.check_patern(
-                                    self.board.board[next_y][next_x].inputs[(next_x, next_y)][1]) or str(self.board.board[next_y][next_x].__class__) in ("<class '__main__.Deleter'>", "<class '__main__.Hub'>"):
+                                    self.board.board[next_y][next_x].inputs[(next_x, next_y)][1]) or str(
+                                self.board.board[next_y][next_x].__class__) in (
+                                    "<class '__main__.Deleter'>", "<class '__main__.Hub'>"):
                                 if self.orientation == self.board.board[next_y][next_x].inputs[(next_x, next_y)][2]:
                                     f = True
                                     self.in_bilding = True
@@ -788,7 +872,7 @@ class Board:
             5: Spliter,
             6: Connector,
             7: Deleter,
-            8: Hub,
+            8: Rotator,
             9: Painting,
         }
         if self.currect_bild == bildings_panel[key]:
@@ -894,7 +978,7 @@ class Interface:
 
         button_image = pygame.image.load("Data/Sprites/Button/menu_objects.png").convert_alpha()
         self.button_image = pygame.transform.scale(button_image, (
-        self.btn_width // 8, self.btn_height // 2))  # Подгоните размер изображения под кнопку
+            self.btn_width // 8, self.btn_height // 2))  # Подгоните размер изображения под кнопку
 
         self.menu_actions_button = pygame_gui.elements.UIButton(
             relative_rect=pygame.Rect((int(width - self.btn_width // 8), 0),
