@@ -1,3 +1,5 @@
+import os
+
 import pygame
 import pygame_gui
 from main import *
@@ -80,6 +82,10 @@ class MainMenu:
     def start_game(self):
         print("Продолжение игры.")
         self.music.play(loops=-1)
+        if os.access("game_data.txt", os.F_OK) and os.access("save_board.txt", os.F_OK):
+            init_game()
+        else:
+            init_game(True)
 
     def restart_game(self):
         print("Новая игра началась!")

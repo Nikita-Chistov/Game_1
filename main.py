@@ -83,7 +83,7 @@ class Data:
         self.level = 0
         self.bildings_levels = {}
         self.figures_in_hub = {}
-        self.font = pygame.font.SysFont(None, 25)
+        self.font = pygame.font.SysFont(None, 30)
 
     def get_figure(self, figure):
         self.figures_in_hub[str(figure)] = self.figures_in_hub.get(str(figure), 0) + 1
@@ -165,6 +165,17 @@ class Data:
                     if figure[j, i][0] == 2:
                         self.render_part_square(centre[0] - x_n + part_size * i, centre[1] - y_n + part_size * j,
                                                 part_size, figure[j, i][1], figure[j, i][2:5])
+
+    def save(self):
+        with open(f"game_data.txt", "w") as f:
+            f.write(str(self.figures_in_hub))
+            f.write("\n")
+            f.write(str(self.level))
+
+    def load(self):
+        with open(f"game_data.txt", "r") as f:
+            self.figures_in_hub = eval(f.readline())
+            self.level = eval(f.readline())
 
 
 class Bildings(pygame.sprite.Sprite):
@@ -919,8 +930,6 @@ class Board:
                               pygame.K_7, pygame.K_8, pygame.K_9]
                 if key == pygame.K_r:
                     self.currect_orientation = (self.currect_orientation + 1) % 4
-                if key == pygame.K_s:
-                    self.save()
                 if key == pygame.K_l:
                     self.load()
 
@@ -1102,13 +1111,19 @@ def init_game(new_game=False):
     global Board
     global data
     global render_count
-    board = Board(100, 100, 40)
+    board = Board(101, 101, 40)
     interface = Interface(width, height)
     running = True
     fps = TICKS
     data = Data()
+    board.x = -50 * board.cell_size + width // 2
+    board.y = -50 * board.cell_size + height // 2
     if not new_game:
         board.load()
+        data.load()
+    else:
+        Hub(board, 49, 49, 0)
+
     # for i in range(5, 10):
     #     for j in range(5, 10):
     #         Belt(board, i, j, 1)
@@ -1174,6 +1189,7 @@ def init_game(new_game=False):
         # pygame.draw.circle(screen, pygame.Color("#bec1c6"), (250, 250), 25)
         pygame.display.update()
     board.save()
+    data.save()
 
 
 if __name__ == '__main__':
