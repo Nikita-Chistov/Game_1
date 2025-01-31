@@ -252,7 +252,7 @@ class Hub(Bildings):
     Size = (3, 3)
     Sprite_images = get_resize_images("Hub", Size)
     Sprite_group = pygame.sprite.Group()
-    Patern_delays = [0, 250]
+    Patern_delays = [0, 50]
     Patern_images = [0, 0]
     capture = 0
     current_sprite = 0
@@ -264,12 +264,17 @@ class Hub(Bildings):
     Outputs = np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0]])
     Size_input_Figures = [2, 4]
 
+    def check_can_create(self):
+        return any(
+            [self.board.figures_on_board[y][x] is not None and self.board.figures_on_board[y][x].in_bilding for x, y in
+             self.inputs.keys()])
+
     def create_product(self):
-        for x, y in self.outputs.keys():
+        for x, y in self.inputs.keys():
             if self.board.figures_on_board[y][x] is not None:
                 figure = self.board.figures_on_board[y][x].componets
                 # data.get_figure(figure)
-                pass
+                self.board.figures_on_board[y][x].kill()
 
 
 class Spliter(Bildings):
@@ -570,9 +575,8 @@ class Figure():
                 elif self.board.board[next_y][next_x].__class__.__bases__[0] is Bildings:
                     if self.board.figures_on_board[next_y][next_x] is None:
                         if (next_x, next_y) in self.board.board[next_y][next_x].inputs.keys():
-                            print(self.size in self.board.board[next_y][next_x].__class__.Size_input_Figures, str(self.board.board[next_y][next_x].__class__))
                             if self.check_patern(
-                                    self.board.board[next_y][next_x].inputs[(next_x, next_y)][1]) or str(self.board.board[next_y][next_x].__class__) in ("__main__.Deleter", "__main__.Hub"):
+                                    self.board.board[next_y][next_x].inputs[(next_x, next_y)][1]) or str(self.board.board[next_y][next_x].__class__) in ("<class '__main__.Deleter'>", "<class '__main__.Hub'>"):
                                 if self.orientation == self.board.board[next_y][next_x].inputs[(next_x, next_y)][2]:
                                     f = True
                                     self.in_bilding = True
@@ -669,7 +673,8 @@ code_bildings = {
     Spliter: SPLITTER_CODE,
     Deleter: DELETER_CODE,
     Connector: CONNECTOR_CODE,
-    Rotator: ROTATOR_CODE
+    Rotator: ROTATOR_CODE,
+    Painting: PAINTING_CODE
 
 }
 
@@ -838,7 +843,6 @@ class Board:
                 -2 * self.cell_size < self.y + y * self.cell_size < screen.get_height() + 2 * self.cell_size)
 
     def save(self):
-        print(324)
         with open("save_board.txt", "w") as f:
             code_board = [([None] * self.width) for _ in range(self.height)]
             for i in range(self.height):
@@ -1051,14 +1055,17 @@ def init_game(new_game=False):
         Deleter.Update_animation()
         Painting.Update_animation()
         Asembler.Update_animation()
+        Hub.Update_animation()
         Figure.Update()
         interface.update(time_delta)
         interface.draw()
+        # pygame.draw.rect(screen, (128, 105, 102), (300, 300, 100, 100))
         # pygame.draw.rect(screen, (128, 105, 102), (300, 300, 100, 100))
         # pygame.draw.rect(screen, (55, 54, 59), (300, 300, 100, 100), 2)
         # screen.blit(pygame.image.load("Data/Sprites/Factory/Factory_1.png"), (200, 200))
         # pygame.draw.circle(screen, pygame.Color("#bec1c6"), (250, 250), 25)
         pygame.display.update()
+    board.save()
 
 
 if __name__ == '__main__':
