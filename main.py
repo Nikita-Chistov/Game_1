@@ -93,9 +93,25 @@ class Data:
         ]
         self.count_all_levels = [10, 20, 50, 100, 100]
         self.level = 0
-        self.bildings_levels = {}
+        self.bildings_count_levels = [100, 200, 500]
+        self.bildings_levels = {
+            Factory: [0, [250, 200, 150, 100]],
+            Spliter: [0, [250, 200, 150, 100]],
+            Connector: [0, [250, 200, 150, 100]],
+            Rotator: [0, [250, 200, 150, 100]],
+            Painting: [0, [250, 200, 150, 100]],
+            Asembler: [0, [250, 200, 150, 100]],
+        }
         self.figures_in_hub = {}
         self.font = pygame.font.SysFont(None, 30)
+    def update_level(self, bild):
+        update_figure = np.array([])
+        level = self.bildings_levels[bild][0]
+        if self.bildings_count_levels[level] <= self.figures_in_hub.get(str(update_figure), 0):
+            self.figures_in_hub[str(update_figure)] -= self.bildings_count_levels[level]
+            self.bildings_levels[bild][0] += 1
+            bild.Patern_delays[-1] = self.bildings_levels[bild][1][self.bildings_levels[bild][0]]
+
 
     def get_figure(self, figure):
         self.figures_in_hub[str(figure)] = self.figures_in_hub.get(str(figure), 0) + 1
@@ -1143,6 +1159,8 @@ def init_game(new_game=False):
         data.load()
     else:
         Hub(board, 49, 49, 0)
+    for bild in data.bildings_levels.keys():
+        bild.Patern_delays[-1] = data.bildings_levels[bild][1][data.bildings_levels[bild][0]]
 
     # for i in range(5, 10):
     #     for j in range(5, 10):
