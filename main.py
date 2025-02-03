@@ -104,6 +104,7 @@ class Data:
         }
         self.figures_in_hub = {}
         self.font = pygame.font.SysFont(None, 30)
+
     def update_level(self, bild):
         update_figure = np.array([])
         level = self.bildings_levels[bild][0]
@@ -111,7 +112,6 @@ class Data:
             self.figures_in_hub[str(update_figure)] -= self.bildings_count_levels[level]
             self.bildings_levels[bild][0] += 1
             bild.Patern_delays[-1] = self.bildings_levels[bild][1][self.bildings_levels[bild][0]]
-
 
     def get_figure(self, figure):
         self.figures_in_hub[str(figure)] = self.figures_in_hub.get(str(figure), 0) + 1
@@ -882,7 +882,9 @@ class Board:
                                         self.get_cell(pygame.mouse.get_pos())[1] * self.cell_size + self.y))
         if self.help:
             font = pygame.font.SysFont(None, 25)
-            text = font.render(f"ЛКМ - Строить\nПКМ - Удалять\nКолесо мыши - Масштаб\nКлавиатура:\n1 - Belt\n2 - BeltLeft\n3 - BeltRight\n4 - Factory\n5 - Spliter\n6 - Connector\n7 - Deleter\n8 - Rotator\n9 - Painter\n0 - Asembler\nW, A, S, D - перемещение\nR - поворот\nQ - копировать постройку\nC - Показать/Скрыть подсказки", True, (0, 0, 0))
+            text = font.render(
+                f"ЛКМ - Строить\nПКМ - Удалять\nКолесо мыши - Масштаб\nКлавиатура:\n1 - Belt\n2 - BeltLeft\n3 - BeltRight\n4 - Factory\n5 - Spliter\n6 - Connector\n7 - Deleter\n8 - Rotator\n9 - Painter\n0 - Asembler\nW, A, S, D - перемещение\nR - поворот\nQ - копировать постройку\nC - Показать/Скрыть подсказки",
+                True, (0, 0, 0))
             screen.blit(text, (10, 100))
 
     def get_cell(self, mouse_pos):
@@ -918,6 +920,7 @@ class Board:
             7: Deleter,
             8: Rotator,
             9: Painting,
+            10:BeltConnector
         }
         if self.currect_bild == bildings_panel[key]:
             self.currect_bild = None
@@ -1062,9 +1065,7 @@ class Interface:
 
         self.clock = pygame.time.Clock()
         self.update_buttons_visibility()
-        self.panel()
 
-    def panel(self):
         self.bottom_panel = pygame_gui.elements.UIPanel(
             relative_rect=pygame.Rect((0, height - self.btn_height), (width, self.btn_height)),
             manager=self.ui_manager
@@ -1072,10 +1073,12 @@ class Interface:
         self.bildings = ["Data/Sprites/Asembler/Asembler_1.png", "Data/Sprites/Belt/Belt_1.png",
                          "Data/Sprites/BeltLeft/BeltLeft_1.png", "Data/Sprites/BeltRight/BeltRight_1.png",
                          "Data/Sprites/Factory/Factory_1.png", "Data/Sprites/Deleter/Deleter_1.png",
-                         "Data/Sprites/BeltConnector/BeltConnector_1.png", "Data/Sprites/Painting/Painting_1.png",
-                         "Data/Sprites/Rotator/Rotator_1.png", "Data/Sprites/Spliter/Spliter_1.png",
+                          "Data/Sprites/Painting/Painting_1.png", "Data/Sprites/Rotator/Rotator_1.png",
+                         "Data/Sprites/BeltConnector/BeltConnector_1.png", "Data/Sprites/Spliter/Spliter_1.png",
                          "Data/Sprites/Сonneсtor/Сonneсtor_1.png"]
-        print(len(self.bildings))
+        self.panel()
+
+    def panel(self):
         self.buttons = []
         for i in range(11):
             btn_x = int(self.btn_width // 8 + i * (self.btn_width // 4))
@@ -1088,7 +1091,7 @@ class Interface:
                 text="",
                 relative_rect=pygame.Rect((btn_x, btn_y), (int(self.btn_width // 6), int(self.btn_height // 1.5))),
                 manager=self.ui_manager,
-                object_id=pygame_gui.core.ObjectID(class_id="#construction_button", object_id="#construction_button"),
+                object_id=pygame_gui.core.ObjectID(class_id="#bottom_panel_button", object_id="#bottom_panel_button"),
                 container=self.bottom_panel
             )
             button.set_image(self.button_image2)
@@ -1147,49 +1150,57 @@ class Interface:
             self.ui_manager.draw_ui(screen)
             pygame.display.flip()
 
-    def run(self, events, pos):
-        for event in events:
-            self.menu_actions_button.set_image(self.button_image)
-            self.ui_manager.process_events(event)
-            if event.type == pygame_gui.UI_BUTTON_PRESSED and event.ui_element == self.menu_actions_button:
-                self.toggle_menu()
-            if event.type == pygame.USEREVENT and event.user_type == pygame_gui.UI_BUTTON_PRESSED:
-                if event.ui_element == self.buttons[1]:
-                    print("Нажата кнопка 1")
-                elif event.ui_element == self.buttons[2]:
-                    print("Нажата кнопка 2")
-                elif event.ui_element == self.buttons[3]:
-                    print("Нажата кнопка 3")
-                elif event.ui_element == self.buttons[4]:
-                    print("Нажата кнопка 4")
-                elif event.ui_element == self.buttons[5]:
-                    print("Нажата кнопка 5")
-                elif event.ui_element == self.buttons[6]:
-                    print("Нажата кнопка 6")
-                elif event.ui_element == self.buttons[7]:
-                    print("Нажата кнопка 7")
-                elif event.ui_element == self.buttons[8]:
-                    print("Нажата кнопка 8")
-                elif event.ui_element == self.buttons[9]:
-                    print("Нажата кнопка 9")
-                elif event.ui_element == self.buttons[10]:
-                    print("Нажата кнопка 10")
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if self.menu_expanded:
-                    if self.stop_button.rect.collidepoint(pos):
-                        pygame.display.flip()
-                        return self.handle_button_click(self.stop_button)
-                    elif self.exit_button.rect.collidepoint(pos):
-                        pygame.display.flip()
-                        return self.handle_button_click(self.exit_button)
+    def run(self, event, pos):
+        self.menu_actions_button.set_image(self.button_image)
+        self.ui_manager.process_events(event)
+        if event.type == pygame_gui.UI_BUTTON_PRESSED and event.ui_element == self.menu_actions_button:
+            self.toggle_menu()
+        if event.type == pygame.MOUSEMOTION:
+            for i in range(11):
+                if self.buttons[i].rect.collidepoint(pos):
+                    self.panel()
+        if event.type == pygame.USEREVENT and event.user_type == pygame_gui.UI_BUTTON_PRESSED:
+            if event.ui_element == self.buttons[0]:
+                return "K_0"
+            elif event.ui_element == self.buttons[1]:
+                return "K_1"
+            elif event.ui_element == self.buttons[2]:
+                return "K_2"
+            elif event.ui_element == self.buttons[3]:
+                return "K_3"
+            elif event.ui_element == self.buttons[4]:
+                return "K_4"
+            elif event.ui_element == self.buttons[5]:
+                return "K_5"
+            elif event.ui_element == self.buttons[6]:
+                return "K_6"
+            elif event.ui_element == self.buttons[7]:
+                return "K_7"
+            elif event.ui_element == self.buttons[8]:
+                return "K_8"
+            elif event.ui_element == self.buttons[9]:
+                return "K_9"
+            elif event.ui_element == self.buttons[10]:
+                return "K_10"
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.menu_expanded:
+                if self.stop_button.rect.collidepoint(pos):
+                    pygame.display.flip()
+                    return self.handle_button_click(self.stop_button)
+                elif self.exit_button.rect.collidepoint(pos):
+                    pygame.display.flip()
+                    return self.handle_button_click(self.exit_button)
         pygame.display.flip()
         return True
+
 
     def update(self, time_delta):
         self.ui_manager.update(time_delta)
 
+
     def draw(self):
         self.ui_manager.draw_ui(screen)
+
 
 def init_game(new_game=False):
     global Board
@@ -1235,7 +1246,30 @@ def init_game(new_game=False):
                 board.update("resize", event)
             if event.type == pygame.KEYDOWN:
                 board.update("keydown", event)
-        running = interface.run(events, pygame.mouse.get_pos())
+            running = interface.run(event, pygame.mouse.get_pos())
+            if running != False or running != True:
+                if running == "K_0":
+                    board.change_current_bild(0)
+                elif running == "K_1":
+                    board.change_current_bild(1)
+                elif running == "K_2":
+                    board.change_current_bild(2)
+                elif running == "K_3":
+                    board.change_current_bild(3)
+                elif running == "K_4":
+                    board.change_current_bild(4)
+                elif running == "K_5":
+                    board.change_current_bild(7)
+                elif running == "K_6":
+                    board.change_current_bild(9)
+                elif running == "K_7":
+                    board.change_current_bild(8)
+                elif running == "K_8":
+                    board.change_current_bild(10)
+                elif running == "K_9":
+                    board.change_current_bild(5)
+                elif running == "K_10":
+                    board.change_current_bild(6)
         if pygame.mouse.get_pressed():
             board.update("MouseButton_pressed", pygame.mouse.get_pressed())
         render_count = (render_count + 1) % 1
