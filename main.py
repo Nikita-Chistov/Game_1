@@ -560,7 +560,11 @@ class Painting(Bildings):
 
     def __init__(self, board, x, y, orientation):
         super().__init__(board, x, y, orientation)
-        self.colour = ""
+        self.selected_color = self.color_selection()
+
+    def color_selection(self):
+        interface = Interface(width, height)
+        return interface.painting()
 
     def check_can_create(self):
         x, y = list(self.outputs.items())[0][0]
@@ -570,7 +574,8 @@ class Painting(Bildings):
         x_input = list(self.inputs.items())[0][0][0]
         y_input = list(self.inputs.items())[0][0][1]
         figure = self.board.figures_on_board[y_input][x_input].componets
-        new_color = (255, 0, 0)
+        color = pygame.Color(self.selected_color)
+        new_color = (color.r, color.g, color.b)
         for row in range(figure.shape[0]):
             for col in range(figure.shape[1]):
                 figure[row, col][2:] = new_color
@@ -1078,14 +1083,120 @@ class Interface:
                          "Data/Sprites/Сonneсtor/Сonneсtor_1.png"]
         self.panel()
 
+        self.paint = ["Data/Sprites/Button/image_2025-01-29_18-09-57.png",
+                      "Data/Sprites/Button/image_2025-01-29_18-10-22.png",
+                      "Data/Sprites/Button/image_2025-01-29_18-10-45.png",
+                      "Data/Sprites/Button/image_2025-01-29_18-11-07.png",
+                      "Data/Sprites/Button/image_2025-01-29_18-11-32.png",
+                      "Data/Sprites/Button/image_2025-01-29_18-11-56.png",
+                      "Data/Sprites/Button/image_2025-01-29_18-12-21.png",
+                      "Data/Sprites/Button/image_2025-01-29_18-12-39.png",
+                      "Data/Sprites/Button/image_2025-01-29_18-13-14.png",
+                      "Data/Sprites/Button/image_2025-01-29_18-13-41.png",
+                      "Data/Sprites/Button/image_2025-01-29_18-14-41.png",
+                      "Data/Sprites/Button/image_2025-01-29_18-15-23.png",
+                      "Data/Sprites/Button/image_2025-01-29_18-15-45.png",
+                      "Data/Sprites/Button/image_2025-01-29_18-16-38.png"]
+
+        self.manager = pygame_gui.UIManager((width, height))
+        self.panel_paint = pygame_gui.elements.UIPanel(
+            relative_rect=pygame.Rect((width*0.05, self.btn_height*3), (width*0.9, self.btn_height)),
+            manager=self.manager
+        )
+        font = pygame.font.SysFont("Ink Free", 36)
+
+        self.text = font.render("Выберите цвет для покраски!", True, "#0a463d")
+        self.buttons_s = []
+        for i in range(14):
+            btn_x = int(self.btn_width // 11 + i * (self.btn_width // 4))
+            btn_y = int(self.btn_height * 0.25)
+
+            self.button_image1 = pygame.image.load(self.paint[i])
+            self.button_image1 = pygame.transform.scale(self.button_image1, (
+                (int(self.btn_width // 6)), int(self.btn_height // 1.5)))
+            button1 = pygame_gui.elements.UIButton(
+                text="",
+                relative_rect=pygame.Rect((btn_x, btn_y), (int(self.btn_width // 6), int(self.btn_height // 1.5))),
+                manager=self.manager,
+                container=self.panel_paint
+            )
+            button1.set_image(self.button_image1)
+            self.buttons_s.append(button1)
+
+    def painting(self):
+        colors = [
+            pygame.Color(255, 16, 25), pygame.Color(255, 165, 0), pygame.Color("#fff64a"), pygame.Color("#4a8002"),
+            pygame.Color("#356c9e"), pygame.Color(127, 0, 255), pygame.Color("#4ea0ea"), pygame.Color("#fd605f"),
+            pygame.Color("#bda5e2"), pygame.Color("#002d24"), pygame.Color("#4d000c"),
+            pygame.Color(0, 0, 0), pygame.Color(255, 255, 255), pygame.Color("#e0dbd7")
+        ]
+        print(len(colors))
+        while True:
+            events = pygame.event.get()
+            time_delta = clock.tick(60) / 1000.0
+            for event in events:
+                self.manager.process_events(event)
+                for i, button in enumerate(self.buttons_s):
+                    self.button_image1 = pygame.image.load(self.paint[i])
+                    self.button_image1 = pygame.transform.scale(self.button_image1, (
+                        (int(self.btn_width // 6)), int(self.btn_height // 1.5)))
+                    self.buttons_s[i].set_image(self.button_image1)
+                if event.type == pygame.USEREVENT and event.user_type == pygame_gui.UI_BUTTON_PRESSED:
+                    if event.ui_element == self.buttons_s[0]:
+                        print("Red")
+                        return colors[0]
+                    elif event.ui_element == self.buttons_s[1]:
+                        print("Orange1")
+                        return colors[1]
+                    elif event.ui_element == self.buttons_s[2]:
+                        print("Yellow")
+                        return colors[2]
+                    elif event.ui_element == self.buttons_s[3]:
+                        print("Green")
+                        return colors[3]
+                    elif event.ui_element == self.buttons_s[4]:
+                        print("Blue")
+                        return colors[4]
+                    elif event.ui_element == self.buttons_s[5]:
+                        print("purple")
+                        return colors[5]
+                    elif event.ui_element == self.buttons_s[6]:
+                        print("sky blue")
+                        return colors[6]
+                    elif event.ui_element == self.buttons_s[7]:
+                        print("pink")
+                        return colors[7]
+                    elif event.ui_element == self.buttons_s[8]:
+                        print("withe+purple")
+                        return colors[8]
+                    elif event.ui_element == self.buttons_s[9]:
+                        print("black+green")
+                        return colors[9]
+                    elif event.ui_element == self.buttons_s[10]:
+                        print("brown+red")
+                        return colors[10]
+                    elif event.ui_element == self.buttons_s[11]:
+                        print("black")
+                        return colors[11]
+                    elif event.ui_element == self.buttons_s[12]:
+                        print("white")
+                        return colors[12]
+                    elif event.ui_element == self.buttons_s[13]:
+                        print("grey")
+                        return colors[13]
+            self.manager.update(time_delta)
+            self.manager.draw_ui(screen)
+            screen.blit(self.text, (screen.get_width() // 2 - self.text.get_width() // 2, screen.get_height() // 2 - self.text.get_height() // 2))
+            pygame.display.flip()
+
     def panel(self):
         self.buttons = []
         for i in range(11):
             btn_x = int(self.btn_width // 8 + i * (self.btn_width // 4))
             btn_y = int(self.btn_height * 0.25)
 
-            self.button_image2 = pygame.image.load(self.bildings[i])
-            self.button_image2 = pygame.transform.scale(self.button_image2, (
+            button_image2 = pygame.image.load(self.bildings[i])
+            button_image2 = pygame.transform.scale(button_image2, (
                 (int(self.btn_width // 6)), int(self.btn_height // 1.5)))
             button = pygame_gui.elements.UIButton(
                 text="",
@@ -1094,7 +1205,7 @@ class Interface:
                 object_id=pygame_gui.core.ObjectID(class_id="#bottom_panel_button", object_id="#bottom_panel_button"),
                 container=self.bottom_panel
             )
-            button.set_image(self.button_image2)
+            button.set_image(button_image2)
             self.buttons.append(button)
 
     def toggle_menu(self):
