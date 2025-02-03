@@ -1062,6 +1062,37 @@ class Interface:
 
         self.clock = pygame.time.Clock()
         self.update_buttons_visibility()
+        self.panel()
+
+    def panel(self):
+        self.bottom_panel = pygame_gui.elements.UIPanel(
+            relative_rect=pygame.Rect((0, height - self.btn_height), (width, self.btn_height)),
+            manager=self.ui_manager
+        )
+        self.bildings = ["Data/Sprites/Asembler/Asembler_1.png", "Data/Sprites/Belt/Belt_1.png",
+                         "Data/Sprites/BeltLeft/BeltLeft_1.png", "Data/Sprites/BeltRight/BeltRight_1.png",
+                         "Data/Sprites/Factory/Factory_1.png", "Data/Sprites/Deleter/Deleter_1.png",
+                         "Data/Sprites/BeltConnector/BeltConnector_1.png", "Data/Sprites/Painting/Painting_1.png",
+                         "Data/Sprites/Rotator/Rotator_1.png", "Data/Sprites/Spliter/Spliter_1.png",
+                         "Data/Sprites/Сonneсtor/Сonneсtor_1.png"]
+        print(len(self.bildings))
+        self.buttons = []
+        for i in range(11):
+            btn_x = int(self.btn_width // 8 + i * (self.btn_width // 4))
+            btn_y = int(self.btn_height * 0.25)
+
+            self.button_image2 = pygame.image.load(self.bildings[i])
+            self.button_image2 = pygame.transform.scale(self.button_image2, (
+                (int(self.btn_width // 6)), int(self.btn_height // 1.5)))
+            button = pygame_gui.elements.UIButton(
+                text="",
+                relative_rect=pygame.Rect((btn_x, btn_y), (int(self.btn_width // 6), int(self.btn_height // 1.5))),
+                manager=self.ui_manager,
+                object_id=pygame_gui.core.ObjectID(class_id="#construction_button", object_id="#construction_button"),
+                container=self.bottom_panel
+            )
+            button.set_image(self.button_image2)
+            self.buttons.append(button)
 
     def toggle_menu(self):
         self.menu_expanded = not self.menu_expanded
@@ -1084,7 +1115,6 @@ class Interface:
 
     def stop(self):
         self.menu_actions_button.hide()
-        self.menu_objects_button.hide()
         self.exit_button.hide()
         self.stop_button.hide()
         screen.fill((141, 148, 165))
@@ -1108,7 +1138,6 @@ class Interface:
                     resume_button.hide()
                     exit2_button.hide()
                     self.menu_actions_button.show()
-                    self.menu_objects_button.show()
                     return True
                 if event.type == pygame_gui.UI_BUTTON_PRESSED and event.ui_element == exit2_button:
                     resume_button.hide()
@@ -1120,9 +1149,31 @@ class Interface:
 
     def run(self, events, pos):
         for event in events:
+            self.menu_actions_button.set_image(self.button_image)
             self.ui_manager.process_events(event)
             if event.type == pygame_gui.UI_BUTTON_PRESSED and event.ui_element == self.menu_actions_button:
                 self.toggle_menu()
+            if event.type == pygame.USEREVENT and event.user_type == pygame_gui.UI_BUTTON_PRESSED:
+                if event.ui_element == self.buttons[1]:
+                    print("Нажата кнопка 1")
+                elif event.ui_element == self.buttons[2]:
+                    print("Нажата кнопка 2")
+                elif event.ui_element == self.buttons[3]:
+                    print("Нажата кнопка 3")
+                elif event.ui_element == self.buttons[4]:
+                    print("Нажата кнопка 4")
+                elif event.ui_element == self.buttons[5]:
+                    print("Нажата кнопка 5")
+                elif event.ui_element == self.buttons[6]:
+                    print("Нажата кнопка 6")
+                elif event.ui_element == self.buttons[7]:
+                    print("Нажата кнопка 7")
+                elif event.ui_element == self.buttons[8]:
+                    print("Нажата кнопка 8")
+                elif event.ui_element == self.buttons[9]:
+                    print("Нажата кнопка 9")
+                elif event.ui_element == self.buttons[10]:
+                    print("Нажата кнопка 10")
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if self.menu_expanded:
                     if self.stop_button.rect.collidepoint(pos):
@@ -1139,9 +1190,6 @@ class Interface:
 
     def draw(self):
         self.ui_manager.draw_ui(screen)
-        menu_actions_button_rect = self.menu_actions_button.relative_rect
-        screen.blit(self.button_image, menu_actions_button_rect.topleft)
-
 
 def init_game(new_game=False):
     global Board
