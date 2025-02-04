@@ -1054,7 +1054,7 @@ class Interface:
         self.cell_size = cell_size
         self.ui_manager = pygame_gui.UIManager((width, height), "Data/theme.json")
 
-        button_image = pygame.image.load("Data/Sprites/Button/menu1.png").convert_alpha()
+        button_image = pygame.image.load("Data/Sprites/Button/menu1 .png").convert_alpha()
         self.button_image = pygame.transform.scale(button_image, (
             self.btn_width // 8, self.btn_height // 2))  # Подгоните размер изображения под кнопку
 
