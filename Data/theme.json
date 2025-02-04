@@ -65,20 +65,21 @@
             "shape": "rectangle"
         }
     },
-    "#bottom_panel_button": {
+  "#bottom_panel_button": {
+    "misc": {
+            "shadow_width": "0",
+            "shape": "rectangle",
+            "border_width": "5"
+
+    },
     "colours": {
             "normal_bg": "rgba(0,0,0,0)",
             "hovered_bg": "rgba(0,0,0,0)",
             "disabled_bg": "rgba(0,0,0,0)",
             "selected_bg": "rgba(0,0,0,0)",
-            "dark_bg": "rgba(0,0,0,0)"
-        },
-    "misc": {
-            "shadow_width": "0",
-            "shape": "rectangle",
-            "border_width": "5",
-            "border_colour": "#0a463d",
+            "dark_bg": "rgba(0,0,0,0)",
+            "normal_border": "rgba(0,0,0,0)",
             "hovered_border": "#0a463d"
-    }
-    }
+        }
+  }
 }

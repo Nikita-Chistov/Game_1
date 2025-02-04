@@ -71,6 +71,7 @@ def load_image(path, colorkey=None):
 
 class Data:
     def __init__(self):
+        self.interface = Interface(width, height)
         self.figures_all_levels = [
             np.array([
                 [(2, 0, 195, 205, 236), (1, 1, 195, 205, 236)],
@@ -117,6 +118,8 @@ class Data:
         self.figures_in_hub[str(figure)] = self.figures_in_hub.get(str(figure), 0) + 1
         if self.figures_in_hub.get(str(self.figures_all_levels[self.level]), 0) >= self.count_all_levels[self.level]:
             self.level += 1
+            if self.level == len(self.figures_all_levels):
+                self.interface.final()
 
     def render_part_circle(self, x, y, size, orientation, color):
         radius = size
@@ -558,9 +561,13 @@ class Painting(Bildings):
     Size_input_Figures = [2]
     Sprite_group = pygame.sprite.Group()
 
-    def __init__(self, board, x, y, orientation):
+    def __init__(self, board, x, y, orientation, selected_color=None):
         super().__init__(board, x, y, orientation)
-        self.selected_color = self.color_selection()
+        if selected_color is None:
+            self.selected_color = self.color_selection()
+        else:
+            self.selected_color = pygame.Color(selected_color)
+
 
     def color_selection(self):
         interface = Interface(width, height)
@@ -823,7 +830,10 @@ code_bildings = {
     Deleter: DELETER_CODE,
     Connector: CONNECTOR_CODE,
     Rotator: ROTATOR_CODE,
-    Painting: PAINTING_CODE
+    Painting: PAINTING_CODE,
+    Asembler: ASEMBLER_CODE
+
+
 
 }
 
@@ -870,6 +880,14 @@ class Board:
         for figure in viev_figures:
             figure.update_pos()
             figure.render()
+        for i in viev_sprites:
+            if i.__class__ == Painting:
+                x, y = i.x, i.y
+                color = i.selected_color
+                pygame.draw.rect(screen, color, (x * self.cell_size + self.x, y * self.cell_size + self.y,
+                                                 self.cell_size * 2, self.cell_size * 2))
+
+
         viev_sprites.update()
         viev_sprites.draw(screen)
         if self.currect_bild is not None:
@@ -900,16 +918,17 @@ class Board:
     def build(self):
         if self.currect_bild is not None:
             x, y = self.get_cell(pygame.mouse.get_pos())
-            if self.currect_orientation % 2 == 0:
-                size = self.currect_bild.Size
-            else:
-                size = (self.currect_bild.Size[1], self.currect_bild.Size[0])
-            if all([self.board[y + j][x + i] is None for i in range(size[0]) for j in range(size[1])]):
-                self.currect_bild(self, *self.get_cell(pygame.mouse.get_pos()), self.currect_orientation)
+            if pygame.mouse.get_pos()[1] < height - int(height * 0.115):
+                if self.currect_orientation % 2 == 0:
+                    size = self.currect_bild.Size
+                else:
+                    size = (self.currect_bild.Size[1], self.currect_bild.Size[0])
+                if all([self.board[y + j][x + i] is None for i in range(size[0]) for j in range(size[1])]):
+                    self.currect_bild(self, *self.get_cell(pygame.mouse.get_pos()), self.currect_orientation)
 
     def delete(self):
         x, y = self.get_cell(pygame.mouse.get_pos())
-        if self.board[y][x] is not None:
+        if self.board[y][x] is not None and self.board[y][x].__class__ is not Hub:
             self.board[y][x].kill()
             self.board[y][x] = None
 
@@ -1006,7 +1025,10 @@ class Board:
             for i in range(self.height):
                 for j in range(self.width):
                     if self.board[i][j] is not None and self.board[i][j].__class__ in code_bildings:
-                        code_board[i][j] = (code_bildings[self.board[i][j].__class__], self.board[i][j].orientation)
+                        if self.board[i][j].__class__ == Painting:
+                            code_board[i][j] = (code_bildings[self.board[i][j].__class__], self.board[i][j].orientation, self.board[i][j].selected_color.rgb)
+                        else:
+                            code_board[i][j] = (code_bildings[self.board[i][j].__class__], self.board[i][j].orientation)
             f.write(str(code_board))
 
     def load(self):
@@ -1017,7 +1039,10 @@ class Board:
                 for j in range(self.width):
                     if code_board[i][j] is not None:
                         if self.board[i][j] is None:
-                            reverse_code_bildings[code_board[i][j][0]](self, j, i, code_board[i][j][1])
+                            if code_board[i][j][0] == code_bildings[Painting]:
+                                reverse_code_bildings[code_board[i][j][0]](self, j, i, code_board[i][j][1], code_board[i][j][2])
+                            else:
+                                reverse_code_bildings[code_board[i][j][0]](self, j, i, code_board[i][j][1])
 
 
 class Interface:
@@ -1029,7 +1054,7 @@ class Interface:
         self.cell_size = cell_size
         self.ui_manager = pygame_gui.UIManager((width, height), "Data/theme.json")
 
-        button_image = pygame.image.load("Data/Sprites/Button/menu_objects.png").convert_alpha()
+        button_image = pygame.image.load("Data/Sprites/Button/menu1.png").convert_alpha()
         self.button_image = pygame.transform.scale(button_image, (
             self.btn_width // 8, self.btn_height // 2))  # Подгоните размер изображения под кнопку
 
@@ -1040,15 +1065,6 @@ class Interface:
             manager=self.ui_manager,
             object_id=pygame_gui.core.ObjectID(class_id="#main_button", object_id="#main_button")
         )
-
-        # self.menu_objects_button = pygame_gui.elements.UIButton(
-        #     relative_rect=pygame.Rect((width - int(self.btn_width // 1.5), height - self.btn_height),
-        #                               (int(self.btn_width // 1.5), self.btn_height)),
-        #     text="Постройки",
-        #     manager=self.ui_manager,
-        #     object_id=pygame_gui.core.ObjectID(class_id="#construction_button", object_id="#construction_button")
-        # )
-
         self.menu_x = int(width - self.btn_width // 8) - int(self.btn_width // 3.75) - int(self.btn_width * 0.15)
         self.menu_y = 0
         self.menu_width = int(self.btn_width // 5)
@@ -1067,8 +1083,6 @@ class Interface:
             manager=self.ui_manager,
             object_id=pygame_gui.core.ObjectID(class_id="#construction_button", object_id="#construction_button")
         )
-
-        self.clock = pygame.time.Clock()
         self.update_buttons_visibility()
 
         self.bottom_panel = pygame_gui.elements.UIPanel(
@@ -1118,10 +1132,12 @@ class Interface:
                 text="",
                 relative_rect=pygame.Rect((btn_x, btn_y), (int(self.btn_width // 6), int(self.btn_height // 1.5))),
                 manager=self.manager,
-                container=self.panel_paint
+                container=self.panel_paint,
+                object_id=pygame_gui.core.ObjectID(class_id="#main_button", object_id="#main_button")
             )
             button1.set_image(self.button_image1)
             self.buttons_s.append(button1)
+        self.panel()
 
     def painting(self):
         colors = [
@@ -1130,7 +1146,6 @@ class Interface:
             pygame.Color("#bda5e2"), pygame.Color("#002d24"), pygame.Color("#4d000c"),
             pygame.Color(0, 0, 0), pygame.Color(255, 255, 255), pygame.Color("#e0dbd7")
         ]
-        print(len(colors))
         while True:
             events = pygame.event.get()
             time_delta = clock.tick(60) / 1000.0
@@ -1202,8 +1217,8 @@ class Interface:
                 text="",
                 relative_rect=pygame.Rect((btn_x, btn_y), (int(self.btn_width // 6), int(self.btn_height // 1.5))),
                 manager=self.ui_manager,
-                object_id=pygame_gui.core.ObjectID(class_id="#bottom_panel_button", object_id="#bottom_panel_button"),
-                container=self.bottom_panel
+                container=self.bottom_panel,
+                object_id=pygame_gui.core.ObjectID(class_id="#bottom_panel_button")
             )
             button.set_image(button_image2)
             self.buttons.append(button)
@@ -1267,9 +1282,11 @@ class Interface:
         if event.type == pygame_gui.UI_BUTTON_PRESSED and event.ui_element == self.menu_actions_button:
             self.toggle_menu()
         if event.type == pygame.MOUSEMOTION:
-            for i in range(11):
-                if self.buttons[i].rect.collidepoint(pos):
-                    self.panel()
+            for button in self.buttons:
+                panel_rect = self.bottom_panel.relative_rect.topleft
+                local_mouse_pos = (event.pos[0] - panel_rect[0], event.pos[1] - panel_rect[1])
+                if button.relative_rect.collidepoint(local_mouse_pos):
+                    button.rebuild()
         if event.type == pygame.USEREVENT and event.user_type == pygame_gui.UI_BUTTON_PRESSED:
             if event.ui_element == self.buttons[0]:
                 return "K_0"
@@ -1312,6 +1329,45 @@ class Interface:
     def draw(self):
         self.ui_manager.draw_ui(screen)
 
+    def final(self):
+        background = pygame.image.load("Data/Sprites/Window/Final_window.png").convert()
+        background = pygame.transform.smoothscale(background, (width, height))
+        screen.blit(background, (0, 0))
+
+        self.ui_manager = pygame_gui.UIManager((width, height), "Data/theme.json")
+
+        btn_width = int(width * 0.25)
+        btn_height = int(height * 0.115)
+
+        self.exit_button = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((width - btn_width, height - btn_height),
+                                      (btn_width, btn_height)),
+            text="Выход",
+            manager=self.ui_manager,
+            object_id=pygame_gui.core.ObjectID(class_id="#exit_button", object_id="#exit_button")
+        )
+        self.clock = pygame.time.Clock()
+        self.running = True
+        while self.running:
+            time_delta = self.clock.tick(60) / 1000.0
+            screen.blit(background, (0, 0))
+
+            for event in pygame.event.get():
+                if event.type== pygame.USEREVENT:
+                    if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
+                        if event.ui_element == self.exit_button:
+                            self.running = False
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        self.running = False
+                self.ui_manager.process_events(event)
+            self.ui_manager.update(time_delta)
+            self.ui_manager.draw_ui(screen)
+
+            pygame.display.flip()
+
+        pygame.quit()
+
 
 def init_game(new_game=False):
     global Board
@@ -1331,20 +1387,6 @@ def init_game(new_game=False):
         Hub(board, 49, 49, 0)
     for bild in data.bildings_levels.keys():
         bild.Patern_delays[-1] = data.bildings_levels[bild][1][data.bildings_levels[bild][0]]
-
-    # for i in range(5, 10):
-    #     for j in range(5, 10):
-    #         Belt(board, i, j, 1)
-    # for i in range(5, 10):
-    #     m = np.array([
-    #         [(1, 0, 100, 200, 200), (1, 1, 100, 200, 200)],
-    #         [(1, 3, 100, 200, 200), (1, 2, 100, 200, 200)]
-    #     ])
-    #     m = np.rot90(m, 3)
-    #     for j in range(2):
-    #         for k in range(2):
-    #             m[j, k, 1] = (m[j, k, 1] - 3) % 4
-    #     Figure(2, board, 5, i, m)
 
     while running:
         events = pygame.event.get()
@@ -1395,8 +1437,6 @@ def init_game(new_game=False):
         Belt.Update_animation()
         BeltRight.Update_animation()
         BeltLeft.Update_animation()
-        # all_sprites.update()
-        # all_sprites.draw(screen)
         cur_fps = clock.get_fps()
         fps_text = font.render(f'FPS: {int(cur_fps)}', True, (255, 255, 255))
         screen.blit(fps_text, (10, 10))
@@ -1413,11 +1453,6 @@ def init_game(new_game=False):
         interface.update(time_delta)
         interface.draw()
         data.draw(screen)
-        # pygame.draw.rect(screen, (128, 105, 102), (300, 300, 100, 100))
-        # pygame.draw.rect(screen, (128, 105, 102), (300, 300, 100, 100))
-        # pygame.draw.rect(screen, (55, 54, 59), (300, 300, 100, 100), 2)
-        # screen.blit(pygame.image.load("Data/Sprites/Factory/Factory_1.png"), (200, 200))
-        # pygame.draw.circle(screen, pygame.Color("#bec1c6"), (250, 250), 25)
         pygame.display.update()
     board.save()
     data.save()
@@ -1425,57 +1460,3 @@ def init_game(new_game=False):
 
 if __name__ == '__main__':
     init_game()
-    # Board = Board(500, 500, 40)
-    # running = True
-    # fps = TICKS
-    # all_sprites = pygame.sprite.Group()
-    # phantom_bilds = pygame.sprite.Group()
-    #
-    # for i in range(5, 10):
-    #     for j in range(5, 10):
-    #         Belt(Board, i, j, 1)
-    # for i in range(5, 10):
-    #     m = np.array([
-    #         [(1, 0, 100, 200, 200), (2, 1, 100, 200, 200)],
-    #         [(1, 3, 100, 200, 200), (1, 2, 100, 200, 200)]
-    #     ])
-    #     m = np.rot90(m, 3)
-    #     for j in range(2):
-    #         for k in range(2):
-    #             m[j, k, 1] = (m[j, k, 1] - 3) % 4
-    #     Figure(2, Board, 5, i, m)
-    #
-    # while running:
-    #     for event in pygame.event.get():
-    #         if event.type == pygame.QUIT:
-    #             running = False
-    #         if event.type == pygame.MOUSEBUTTONDOWN and (event.button == 4 or event.button == 5):
-    #             Board.update("resize", event)
-    #         if event.type == pygame.KEYDOWN:
-    #             Board.update("keydown", event)
-    #
-    #     if pygame.mouse.get_pressed():
-    #         Board.update("MouseButton_pressed", pygame.mouse.get_pressed())
-    #     render_count = (render_count + 1) % 1
-    #     if render_count == 0 or no_effectiveness_update:
-    #         screen.fill((0, 0, 0))
-    #         Board.render(screen)
-    #     if Board.cell_size < 50:
-    #         no_effectiveness_update = False
-    #     else:
-    #         no_effectiveness_update = True
-    #     Board.update()
-    #     Belt.Update_animation()
-    #     # all_sprites.update()
-    #     # all_sprites.draw(screen)
-    #     clock.tick(fps)
-    #     cur_fps = clock.get_fps()
-    #     fps_text = font.render(f'FPS: {int(cur_fps)}', True, (255, 255, 255))
-    #     screen.blit(fps_text, (10, 10))
-    #     Figure.Update()
-    #     Factory.Update_animation()
-    #     # pygame.draw.rect(screen, (128, 105, 102), (300, 300, 100, 100))
-    #     # pygame.draw.rect(screen, (55, 54, 59), (300, 300, 100, 100), 2)
-    #     # screen.blit(pygame.image.load("Data/Sprites/Factory/Factory_1.png"), (200, 200))
-    #     # pygame.draw.circle(screen, pygame.Color("#bec1c6"), (250, 250), 25)
-    #     pygame.display.update()
