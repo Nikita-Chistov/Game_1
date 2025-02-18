@@ -1,7 +1,4 @@
 import math
-
-from matplotlib.pyplot import figure
-
 from settings import *
 import numpy as np
 import pygame
